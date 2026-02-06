@@ -1,33 +1,27 @@
-import { View, Text, Pressable } from "react-native";
+import { View } from "react-native";
 import { useRouter } from "expo-router";
+import { theme } from "@/theme/theme";
+import { Text } from "@/ui/Text";
+import { Card } from "@/ui/Card";
+import { Button } from "@/ui/Button";
 
 export default function FeedScreen() {
   const router = useRouter();
 
   return (
-    <View style={{ flex: 1, padding: 16, gap: 12 }}>
-      <Text style={{ fontSize: 22, fontWeight: "700" }}>Stratlife</Text>
+    <View style={{ flex: 1, padding: theme.space.lg, gap: theme.space.md, backgroundColor: theme.colors.bg }}>
+      <Text variant="title" style={{ fontWeight: "700" }}>
+        Stratlife
+      </Text>
 
-      <View style={{ padding: 16, borderRadius: 12, backgroundColor: "#f2f2f2" }}>
-        <Text style={{ fontSize: 16, fontWeight: "600" }}>Your first win starts here.</Text>
-        <Text style={{ marginTop: 6, fontSize: 14, opacity: 0.7 }}>
+      <Card>
+        <Text style={{ fontWeight: "600" }}>Your first win starts here.</Text>
+        <Text muted style={{ marginTop: theme.space.sm }}>
           Track what works. Grow what matters.
         </Text>
-      </View>
+      </Card>
 
-      <Pressable
-        onPress={() => router.push("/create-win")}
-        style={{
-          padding: 14,
-          borderRadius: 12,
-          backgroundColor: "black",
-          alignItems: "center",
-        }}
-      >
-        <Text style={{ color: "white", fontSize: 16, fontWeight: "600" }}>
-          + Create Win
-        </Text>
-      </Pressable>
+      <Button title="+ Create Win" onPress={() => router.push("/create-win")} />
     </View>
   );
 }
