@@ -22,6 +22,7 @@ export default function FeedScreen() {
       </Card>
 
       <Button title="+ Create Win" onPress={() => router.push("/create-win")} />
+      <Button title="Inspire me" variant="secondary" onPress={() => {}} />
     </View>
   );
 }
