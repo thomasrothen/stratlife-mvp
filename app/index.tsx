@@ -1,4 +1,4 @@
-import { View, ScrollView } from "react-native";
+import { View, ScrollView, Pressable } from "react-native";
 import { useRouter, Redirect, useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { theme } from "@/theme/theme";
@@ -15,14 +15,18 @@ type Win = {
   created_at: string;
 };
 
+/* ---------- date helpers ---------- */
+
 function startOfDay(d: Date) {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate());
 }
 
-function isToday(iso: string) {
-  const d = new Date(iso);
-  const now = new Date();
-  return startOfDay(d).getTime() === startOfDay(now).getTime();
+function startOfWeek(d: Date) {
+  const date = startOfDay(d);
+  const day = date.getDay(); // 0 = Sunday
+  const diff = (day === 0 ? -6 : 1) - day; // Monday start
+  date.setDate(date.getDate() + diff);
+  return date;
 }
 
 function formatWinDate(iso: string) {
@@ -30,7 +34,8 @@ function formatWinDate(iso: string) {
   const now = new Date();
 
   const dayDiff = Math.floor(
-    (startOfDay(now).getTime() - startOfDay(d).getTime()) / (1000 * 60 * 60 * 24)
+    (startOfDay(now).getTime() - startOfDay(d).getTime()) /
+      (1000 * 60 * 60 * 24)
   );
 
   if (dayDiff === 0) return "Today";
@@ -39,6 +44,8 @@ function formatWinDate(iso: string) {
 
   return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
+
+/* ---------- main ---------- */
 
 export default function FeedScreen() {
   const router = useRouter();
@@ -57,16 +64,12 @@ export default function FeedScreen() {
       .select("*")
       .order("created_at", { ascending: false });
 
-    if (!error && data) {
-      setWins(data as Win[]);
-    }
+    if (!error && data) setWins(data as Win[]);
 
     setLoadingWins(false);
   }, [session]);
 
-  if (!loading && !session) {
-    return <Redirect href="/login" />;
-  }
+  if (!loading && !session) return <Redirect href="/login" />;
 
   useEffect(() => {
     if (session) loadWins();
@@ -78,14 +81,34 @@ export default function FeedScreen() {
     }, [session, loadWins])
   );
 
-  const stats = useMemo(() => {
-    const total = wins.length;
-    const today = wins.reduce((acc, w) => acc + (isToday(w.created_at) ? 1 : 0), 0);
-    return { total, today };
+  /* ---------- weekly rhythm ---------- */
+
+  const weekData = useMemo(() => {
+    const start = startOfWeek(new Date());
+    const today = startOfDay(new Date()).getTime();
+
+    return Array.from({ length: 7 }, (_, i) => {
+      const day = new Date(start);
+      day.setDate(start.getDate() + i);
+
+      const dayStart = startOfDay(day).getTime();
+
+      const hasWin = wins.some((w) => {
+        return startOfDay(new Date(w.created_at)).getTime() === dayStart;
+      });
+
+      return { hasWin, isToday: dayStart === today };
+    });
   }, [wins]);
 
+  /* ---------- home feed (orientation only) ---------- */
+
+  // Home = glimpse, not archive
+  const visibleWins = useMemo(() => wins.slice(0, 3), [wins]);
+  const hasMore = wins.length > visibleWins.length;
+
   const winCards = useMemo(() => {
-    return wins.map((win) => (
+    return visibleWins.map((win) => (
       <Card key={win.id}>
         <Text style={{ fontWeight: "600" }}>{win.title}</Text>
 
@@ -101,13 +124,29 @@ export default function FeedScreen() {
         </Text>
 
         {win.note ? (
-          <Text muted style={{ marginTop: theme.space.xs }}>
+          <Text
+            muted
+            numberOfLines={2}
+            ellipsizeMode="tail"
+            style={{ marginTop: theme.space.xs }}
+          >
             {win.note}
           </Text>
         ) : null}
+
+        {/* Reserved footer slot for future media hint (icon / tiny preview) */}
+        <View
+          style={{
+            marginTop: theme.space.xs,
+            height: 14,
+            justifyContent: "center",
+          }}
+        >
+          {/* media hint goes here later */}
+        </View>
       </Card>
     ));
-  }, [wins]);
+  }, [visibleWins]);
 
   if (loading || loadingWins) {
     return (
@@ -129,48 +168,104 @@ export default function FeedScreen() {
       style={{
         flex: 1,
         padding: theme.space.lg,
-        gap: theme.space.md,
         backgroundColor: theme.colors.bg,
       }}
     >
-      {/* Anchor card now provides value (later: progress bar / promo video) */}
-      <Card>
-        <Text style={{ fontWeight: "600" }}>Your wins</Text>
-        <Text muted style={{ marginTop: theme.space.sm }}>
-          Track what works. Grow what matters.
-        </Text>
-
-        <View style={{ marginTop: theme.space.md, gap: theme.space.xs }}>
-          <Text muted style={{ fontSize: 13, opacity: 0.8 }}>
-            Wins today: {stats.today}
-          </Text>
-          <Text muted style={{ fontSize: 13, opacity: 0.8 }}>
-            Total wins: {stats.total}
-          </Text>
-        </View>
-      </Card>
-
-      {/* Single primary action */}
-      <Button title="+ Create Win" onPress={() => router.push("/create-win")} />
-
-      <ScrollView
-        contentContainerStyle={{ gap: theme.space.sm, paddingBottom: 40 }}
-        showsVerticalScrollIndicator={false}
-      >
-        {wins.length === 0 ? (
+      {/* Static top section */}
+      <View style={{ gap: theme.space.md }}>
+        <Card>
+          <Text style={{ fontWeight: "600" }}>Your wins</Text>
           <Text muted style={{ marginTop: theme.space.sm }}>
-            No wins yet. Start with something small.
+            Track what works. Grow what matters.
           </Text>
-        ) : (
-          winCards
-        )}
-      </ScrollView>
 
-      <Button
-        title="Log out"
-        variant="secondary"
-        onPress={() => supabase.auth.signOut()}
-      />
+          {/* Weekly rhythm (dots + ring) */}
+          <View
+            style={{
+              flexDirection: "row",
+              gap: 8,
+              marginTop: theme.space.md,
+            }}
+          >
+            {weekData.map((d, i) => (
+              <View
+                key={i}
+                style={{
+                  width: 14,
+                  height: 14,
+                  borderRadius: 7,
+                  borderWidth: d.isToday ? 1.5 : 0,
+                  borderColor: d.isToday ? theme.colors.primary : "transparent",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <View
+                  style={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: 4,
+                    backgroundColor: d.hasWin
+                      ? theme.colors.primary
+                      : theme.colors.border,
+                    opacity: d.hasWin ? 1 : 0.3,
+                  }}
+                />
+              </View>
+            ))}
+          </View>
+        </Card>
+
+        <Button title="+ Create Win" onPress={() => router.push("/create-win")} />
+      </View>
+
+      {/* Scroll region */}
+      <View style={{ flex: 1, marginTop: theme.space.md }}>
+        <ScrollView
+          contentContainerStyle={{
+            gap: theme.space.sm,
+            paddingBottom: theme.space.xl,
+          }}
+          showsVerticalScrollIndicator={true}
+        >
+          {wins.length === 0 ? (
+            <Text muted>No wins yet. Start with something small.</Text>
+          ) : (
+            <>
+              {winCards}
+
+              {/* Calm, explicit hint (no overlay) */}
+              {hasMore ? (
+                <Pressable
+                  onPress={() => {
+                    // Day 5: router.push("/history")
+                  }}
+                >
+                  <Text
+                    muted
+                    style={{
+                      marginTop: theme.space.xs,
+                      fontSize: 13,
+                      opacity: 0.75,
+                    }}
+                  >
+                    See all wins →
+                  </Text>
+                </Pressable>
+              ) : null}
+            </>
+          )}
+        </ScrollView>
+      </View>
+
+      {/* Static bottom action */}
+      <View style={{ marginTop: theme.space.sm }}>
+        <Button
+          title="Log out"
+          variant="secondary"
+          onPress={() => supabase.auth.signOut()}
+        />
+      </View>
     </View>
   );
 }
