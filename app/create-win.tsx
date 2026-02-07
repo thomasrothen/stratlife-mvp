@@ -34,7 +34,7 @@ export default function CreateWinScreen() {
 
       if (error) throw error;
 
-      router.back(); // return to feed
+      router.back();
     } catch (err: any) {
       setError(err?.message ?? "Could not save win.");
     } finally {
@@ -69,7 +69,7 @@ export default function CreateWinScreen() {
         <Input
           value={note}
           onChangeText={setNote}
-          placeholder="What worked? Why is this meaningful?"
+          placeholder="Anything you want to remember about this."
           multiline
           style={{ minHeight: 110, textAlignVertical: "top" }}
         />
