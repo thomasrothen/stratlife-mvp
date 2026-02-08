@@ -6,6 +6,5 @@ export default function Index() {
 
   if (loading) return null;
 
-  // Root route = decision, not a screen
   return session ? <Redirect href="/today" /> : <Redirect href="/welcome" />;
 }

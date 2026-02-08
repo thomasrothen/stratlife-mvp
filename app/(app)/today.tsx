@@ -11,7 +11,6 @@ import { useAuth } from "@/lib/auth";
 type Win = {
   id: string;
   title: string;
-  note: string | null;
   created_at: string;
 };
 
@@ -34,8 +33,7 @@ function formatWinDate(iso: string) {
   const now = new Date();
 
   const dayDiff = Math.floor(
-    (startOfDay(now).getTime() - startOfDay(d).getTime()) /
-      (1000 * 60 * 60 * 24)
+    (startOfDay(now).getTime() - startOfDay(d).getTime()) / (1000 * 60 * 60 * 24)
   );
 
   if (dayDiff === 0) return "Today";
@@ -61,14 +59,13 @@ export default function TodayScreen() {
 
     const { data, error } = await supabase
       .from("wins")
-      .select("*")
+      .select("id, title, created_at")
       .order("created_at", { ascending: false });
 
     if (!error && data) setWins(data as Win[]);
     setLoadingWins(false);
   }, [session]);
 
-  // Not signed in → Welcome (Screen 1)
   if (!loading && !session) return <Redirect href="/welcome" />;
 
   useEffect(() => {
@@ -81,8 +78,6 @@ export default function TodayScreen() {
     }, [session, loadWins])
   );
 
-  /* ---------- weekly rhythm ---------- */
-
   const weekData = useMemo(() => {
     const start = startOfWeek(new Date());
     const today = startOfDay(new Date()).getTime();
@@ -93,57 +88,16 @@ export default function TodayScreen() {
 
       const dayStart = startOfDay(day).getTime();
 
-      const hasWin = wins.some((w) => {
-        return startOfDay(new Date(w.created_at)).getTime() === dayStart;
-      });
+      const hasWin = wins.some(
+        (w) => startOfDay(new Date(w.created_at)).getTime() === dayStart
+      );
 
       return { hasWin, isToday: dayStart === today };
     });
   }, [wins]);
 
-  /* ---------- home (orientation only) ---------- */
-
-  // Today = glimpse, not archive
   const visibleWins = useMemo(() => wins.slice(0, 3), [wins]);
   const hasMore = wins.length > visibleWins.length;
-
-  const winCards = useMemo(() => {
-    return visibleWins.map((win) => (
-      <Card key={win.id}>
-        <Text style={{ fontWeight: "600" }}>{win.title}</Text>
-
-        <Text
-          muted
-          style={{
-            marginTop: theme.space.xs,
-            fontSize: 13,
-            opacity: 0.75,
-          }}
-        >
-          {formatWinDate(win.created_at)}
-        </Text>
-
-        {win.note ? (
-          <Text
-            muted
-            numberOfLines={2}
-            ellipsizeMode="tail"
-            style={{ marginTop: theme.space.xs }}
-          >
-            {win.note}
-          </Text>
-        ) : null}
-
-        <View
-          style={{
-            marginTop: theme.space.xs,
-            height: 14,
-            justifyContent: "center",
-          }}
-        />
-      </Card>
-    ));
-  }, [visibleWins]);
 
   if (loading || loadingWins) {
     return (
@@ -170,22 +124,36 @@ export default function TodayScreen() {
     >
       {/* Header / Orientation */}
       <View style={{ gap: theme.space.md }}>
-        <View>
-          <Text variant="title" style={{ fontWeight: "700" }}>
-            Your Life — Today
-          </Text>
-          <Text muted style={{ marginTop: theme.space.xs }}>
-            Small steps count. Impact grows over time.
-          </Text>
+        <View
+          style={{
+            flexDirection: "row",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
+          }}
+        >
+          <View style={{ flex: 1, paddingRight: theme.space.md }}>
+            <Text variant="title" style={{ fontWeight: "700" }}>
+              Your Life — Today
+            </Text>
+            <Text muted style={{ marginTop: theme.space.xs }}>
+              Small steps count. Impact grows over time.
+            </Text>
+          </View>
+
+          <Pressable onPress={() => router.push("/settings")}>
+            <Text muted style={{ fontSize: 13, opacity: 0.75, paddingTop: 6 }}>
+              Settings
+            </Text>
+          </Pressable>
         </View>
 
+        {/* Weekly rhythm */}
         <Card>
           <Text style={{ fontWeight: "600" }}>Weekly rhythm</Text>
           <Text muted style={{ marginTop: theme.space.xs }}>
             Just a glimpse — no pressure.
           </Text>
 
-          {/* Weekly dots + ring for today */}
           <View
             style={{
               flexDirection: "row",
@@ -211,9 +179,7 @@ export default function TodayScreen() {
                     width: 8,
                     height: 8,
                     borderRadius: 4,
-                    backgroundColor: d.hasWin
-                      ? theme.colors.primary
-                      : theme.colors.border,
+                    backgroundColor: d.hasWin ? theme.colors.primary : theme.colors.border,
                     opacity: d.hasWin ? 1 : 0.3,
                   }}
                 />
@@ -222,6 +188,7 @@ export default function TodayScreen() {
           </View>
         </Card>
 
+        {/* Primary action */}
         <Button title="+ Add moment" onPress={() => router.push("/capture")} />
       </View>
 
@@ -232,48 +199,65 @@ export default function TodayScreen() {
             gap: theme.space.sm,
             paddingBottom: theme.space.xl,
           }}
-          showsVerticalScrollIndicator={true}
+          showsVerticalScrollIndicator
         >
           {wins.length === 0 ? (
-            <Text muted>No moments yet. Start with something small.</Text>
+            <Card>
+              <Text style={{ fontWeight: "600" }}>No moments yet.</Text>
+              <Text muted style={{ marginTop: theme.space.xs }}>
+                Start with something small — one honest sentence.
+              </Text>
+
+              <View style={{ marginTop: theme.space.md }}>
+                <Button title="Capture a moment" onPress={() => router.push("/capture")} />
+              </View>
+            </Card>
           ) : (
             <>
               <Text muted style={{ fontSize: 13, opacity: 0.75 }}>
                 Recent moments
               </Text>
 
-              {winCards}
+              {visibleWins.map((win) => (
+                <Pressable
+                  key={win.id}
+                  onPress={() => router.push(`/journey?highlight=${win.id}`)}
+                >
+                  <Card>
+                    <Text style={{ fontWeight: "600" }}>{win.title}</Text>
+                    <Text
+                      muted
+                      style={{
+                        marginTop: theme.space.xs,
+                        fontSize: 13,
+                        opacity: 0.75,
+                      }}
+                    >
+                      {formatWinDate(win.created_at)}
+                    </Text>
+                  </Card>
+                </Pressable>
+              ))}
 
               {hasMore ? (
-                <Pressable
-                  onPress={() => {
-                    // When Journey exists: router.push("/journey")
-                  }}
-                >
-                  <Text
-                    muted
-                    style={{
-                      marginTop: theme.space.xs,
-                      fontSize: 13,
-                      opacity: 0.75,
-                    }}
-                  >
-                    See your journey →
+                <Card>
+                  <Text style={{ fontWeight: "600" }}>Want the full story?</Text>
+                  <Text muted style={{ marginTop: theme.space.xs }}>
+                    Your Journey holds everything you’ve captured.
                   </Text>
-                </Pressable>
+
+                  <View style={{ marginTop: theme.space.md }}>
+                    <Button
+                      title="See your journey"
+                      variant="secondary"
+                      onPress={() => router.push("/journey")}
+                    />
+                  </View>
+                </Card>
               ) : null}
             </>
           )}
         </ScrollView>
-      </View>
-
-      {/* Keep logout here for now (move to Settings later) */}
-      <View style={{ marginTop: theme.space.sm }}>
-        <Button
-          title="Log out"
-          variant="secondary"
-          onPress={() => supabase.auth.signOut()}
-        />
       </View>
     </View>
   );
