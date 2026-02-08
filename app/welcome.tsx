@@ -8,17 +8,19 @@ import { Button } from "@/ui/Button";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth";
 
-export default function LoginScreen() {
+type Step = "intro" | "email" | "code";
+
+export default function WelcomeScreen() {
   const { session, loading } = useAuth();
 
-  const [step, setStep] = useState<"email" | "code">("email");
+  const [step, setStep] = useState<Step>("intro");
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
-  // If already logged in → go home
-  if (!loading && session) return <Redirect href="/" />;
+  // If already logged in → Today
+  if (!loading && session) return <Redirect href="/today" />;
 
   async function sendCode() {
     setBusy(true);
@@ -26,12 +28,9 @@ export default function LoginScreen() {
     try {
       const e = email.trim().toLowerCase();
 
-      // OTP CODE MODE: IMPORTANT → NO emailRedirectTo here!
       const { error } = await supabase.auth.signInWithOtp({
         email: e,
-        options: {
-          shouldCreateUser: true,
-        },
+        options: { shouldCreateUser: true },
       });
 
       if (error) throw error;
@@ -59,7 +58,7 @@ export default function LoginScreen() {
       });
 
       if (error) throw error;
-      // Session will update via AuthProvider listener and redirect to "/"
+      // Session updates via AuthProvider and Index gate routes to /today
     } catch (err: any) {
       setMsg(err?.message ?? "Invalid code.");
     } finally {
@@ -74,13 +73,28 @@ export default function LoginScreen() {
         padding: theme.space.lg,
         gap: theme.space.md,
         backgroundColor: theme.colors.bg,
+        justifyContent: "center",
       }}
     >
-      <Text variant="title" style={{ fontWeight: "700" }}>
-        Sign in
-      </Text>
+      <View style={{ gap: theme.space.sm }}>
+        <Text variant="title" style={{ fontWeight: "800" }}>
+          Stratlife
+        </Text>
+        <Text muted style={{ fontSize: 14, opacity: 0.8 }}>
+          Inspire life together
+        </Text>
+      </View>
 
-      {step === "email" ? (
+      {step === "intro" ? (
+        <>
+          <Text muted style={{ lineHeight: 20 }}>
+            Most growth happens quietly. Stratlife helps you notice it — and turn
+            it into shared inspiration.
+          </Text>
+
+          <Button title="Get started" onPress={() => setStep("email")} />
+        </>
+      ) : step === "email" ? (
         <>
           <Text muted>
             Enter your email. We’ll send you a 6-digit sign-in code.
@@ -98,6 +112,13 @@ export default function LoginScreen() {
             title={busy ? "Sending…" : "Send code"}
             disabled={busy || email.trim().length < 3}
             onPress={sendCode}
+          />
+
+          <Button
+            title="Back"
+            variant="secondary"
+            disabled={busy}
+            onPress={() => setStep("intro")}
           />
         </>
       ) : (
@@ -124,6 +145,13 @@ export default function LoginScreen() {
             variant="secondary"
             disabled={busy}
             onPress={sendCode}
+          />
+
+          <Button
+            title="Back"
+            variant="secondary"
+            disabled={busy}
+            onPress={() => setStep("email")}
           />
         </>
       )}
