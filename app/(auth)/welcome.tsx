@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { View } from "react-native";
-import { useRouter } from "expo-router";
+import { Redirect, useRouter } from "expo-router";
 import { theme } from "@/theme/theme";
 import { Text } from "@/ui/Text";
 import { Input } from "@/ui/Input";
@@ -15,7 +15,7 @@ const normalizeOtp = (v: string) => v.replace(/\D/g, "").slice(0, 6);
 
 export default function WelcomeScreen() {
   const router = useRouter();
-  const { loading } = useAuth();
+  const { session, loading } = useAuth();
 
   const [step, setStep] = useState<Step>("intro");
   const [email, setEmail] = useState("");
@@ -24,7 +24,11 @@ export default function WelcomeScreen() {
   const [msg, setMsg] = useState<string | null>(null);
   const [cooldown, setCooldown] = useState(0);
 
+  // Auth state still loading
   if (loading) return null;
+
+  // Already logged in → go to app
+  if (session) return <Redirect href="/(app)/today" />;
 
   const emailN = useMemo(() => normalizeEmail(email), [email]);
   const otpN = useMemo(() => normalizeOtp(code), [code]);
@@ -54,7 +58,7 @@ export default function WelcomeScreen() {
       setCooldown(60);
       setMsg("Check your email for the 6-digit code.");
     } catch (e: any) {
-      setMsg(e.message ?? "Could not send code.");
+      setMsg(e?.message ?? "Could not send code.");
     } finally {
       setBusy(false);
     }
@@ -73,55 +77,97 @@ export default function WelcomeScreen() {
       });
       if (error) throw error;
 
-      // 🚨 OTP is single-use → navigate immediately
-      router.replace("/today");
+      // OTP is single-use → navigate immediately into the app group
+      router.replace("/(app)/today");
     } catch (e: any) {
-      setMsg(e.message ?? "Invalid code.");
+      setMsg(e?.message ?? "Invalid code.");
     } finally {
       setBusy(false);
     }
   }
 
   return (
-    <View style={{ flex: 1, padding: theme.space.lg, gap: theme.space.md, justifyContent: "center" }}>
-      <Text variant="title" style={{ fontWeight: "800" }}>Stratlife</Text>
-      <Text muted>Inspire life together</Text>
+    <View
+      style={{
+        flex: 1,
+        padding: theme.space.lg,
+        gap: theme.space.md,
+        justifyContent: "center",
+        backgroundColor: theme.colors.bg,
+      }}
+    >
+      <View style={{ gap: theme.space.xs }}>
+        <Text variant="title" style={{ fontWeight: "800" }}>
+          Welcome
+        </Text>
+        <Text muted>Capture small moments. See your life grow.</Text>
+      </View>
 
-      {step === "intro" && (
-        <>
-          <Text muted>Most growth happens quietly.</Text>
-          <Button title="Get started" onPress={() => setStep("email")} />
-        </>
-      )}
+      {step === "intro" ? (
+        <View style={{ gap: theme.space.sm }}>
+          <Button title="Continue" onPress={() => setStep("email")} />
+        </View>
+      ) : null}
 
-      {step === "email" && (
-        <>
-          <Input value={email} onChangeText={setEmail} placeholder="you@example.com" />
-          <Button title="Send code" disabled={!canSend || busy} onPress={sendCode} />
-          <Button title="Back" variant="secondary" onPress={() => setStep("intro")} />
-        </>
-      )}
-
-      {step === "code" && (
-        <>
+      {step === "email" ? (
+        <View style={{ gap: theme.space.sm }}>
           <Input
-            value={otpN}
-            onChangeText={setCode}
-            keyboardType="number-pad"
-            placeholder="123456"
-            maxLength={6}
+            value={email}
+            onChangeText={setEmail}
+            placeholder="Email address"
+            autoCapitalize="none"
+            keyboardType="email-address"
           />
-          <Button title="Verify" disabled={!canVerify || busy} onPress={verifyCode} />
+
+          <Button
+            title={cooldown > 0 ? `Resend in ${cooldown}s` : "Send code"}
+            disabled={!canSend || busy || cooldown > 0}
+            onPress={sendCode}
+          />
+
+          <Button
+            title="Back"
+            variant="secondary"
+            onPress={() => setStep("intro")}
+          />
+        </View>
+      ) : null}
+
+      {step === "code" ? (
+        <View style={{ gap: theme.space.sm }}>
+          <Input
+            value={code}
+            onChangeText={setCode}
+            placeholder="6-digit code"
+            keyboardType="number-pad"
+          />
+
+          <Button
+            title="Verify"
+            disabled={!canVerify || busy}
+            onPress={verifyCode}
+          />
+
           <Button
             title={cooldown > 0 ? `Resend in ${cooldown}s` : "Resend code"}
             variant="secondary"
-            disabled={cooldown > 0 || busy}
+            disabled={!canSend || busy || cooldown > 0}
             onPress={sendCode}
           />
-        </>
-      )}
 
-      {msg && <Text muted>{msg}</Text>}
+          <Button
+            title="Change email"
+            variant="secondary"
+            onPress={() => setStep("email")}
+          />
+        </View>
+      ) : null}
+
+      {msg ? (
+        <Text muted style={{ marginTop: theme.space.sm }}>
+          {msg}
+        </Text>
+      ) : null}
     </View>
   );
 }

@@ -6,12 +6,8 @@ import {
   LayoutChangeEvent,
 } from "react-native";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import {
-  useFocusEffect,
-  Redirect,
-  useLocalSearchParams,
-} from "expo-router";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useFocusEffect, Redirect, useLocalSearchParams } from "expo-router";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { theme } from "@/theme/theme";
 import { Text } from "@/ui/Text";
 import { supabase } from "@/lib/supabase";
@@ -21,15 +17,11 @@ type Win = {
   id: string;
   title: string;
   created_at: string;
-
-  // New best-practice columns
   area: string | null;
   focus: string | null;
   share: boolean | null;
   details: string | null;
-
-  // Legacy (optional)
-  note?: string | null;
+  note?: string | null; // legacy
 };
 
 function dayKey(iso: string) {
@@ -44,7 +36,6 @@ function formatDayHeading(iso: string) {
   });
 }
 
-// Legacy fallback: only used if the row has no new columns yet
 function parseLegacyNote(note: string | null) {
   if (!note) return { area: "", focus: "", share: false, details: "" };
 
@@ -59,7 +50,8 @@ function parseLegacyNote(note: string | null) {
     if (!line) break;
 
     if (line.toLowerCase().startsWith("area:")) area = line.slice(5).trim();
-    else if (line.toLowerCase().startsWith("focus:")) focus = line.slice(6).trim();
+    else if (line.toLowerCase().startsWith("focus:"))
+      focus = line.slice(6).trim();
     else if (line.toLowerCase().startsWith("share:"))
       share = line.toLowerCase().includes("yes");
   }
@@ -74,14 +66,15 @@ function MetaPill({ text }: { text: string }) {
   return (
     <View
       style={{
-        paddingHorizontal: 10,
-        paddingVertical: 6,
+        paddingHorizontal: 8,
+        paddingVertical: 4,
         borderRadius: 999,
+        backgroundColor: theme.colors.surface,
         borderWidth: 1,
         borderColor: theme.colors.border,
       }}
     >
-      <Text muted style={{ fontSize: 12, opacity: 0.8 }}>
+      <Text muted variant="caption" style={{ opacity: 0.7 }}>
         {text}
       </Text>
     </View>
@@ -91,23 +84,31 @@ function MetaPill({ text }: { text: string }) {
 function CardView({
   children,
   highlighted,
+  expanded,
 }: {
   children: React.ReactNode;
   highlighted?: boolean;
+  expanded?: boolean;
 }) {
   return (
     <View
       style={[
         {
           backgroundColor: theme.colors.surface,
-          borderRadius: 16,
+          borderRadius: theme.radius.lg,
           borderWidth: 1,
           borderColor: theme.colors.border,
-          padding: theme.space.md,
+          padding: expanded ? theme.space.md : theme.space.sm, // compact collapsed cards
         },
+        expanded
+          ? {
+              borderColor: "rgba(0,0,0,0.12)",
+              backgroundColor: "rgba(0,0,0,0.02)",
+            }
+          : null,
         highlighted
           ? {
-              borderColor: "rgba(0,0,0,0.14)",
+              borderColor: "rgba(0,0,0,0.16)",
               backgroundColor: "rgba(0,0,0,0.03)",
             }
           : null,
@@ -121,7 +122,8 @@ function CardView({
 export default function JourneyScreen() {
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ highlight?: string }>();
-  const highlightId = typeof params.highlight === "string" ? params.highlight : null;
+  const highlightId =
+    typeof params.highlight === "string" ? params.highlight : null;
 
   const { session, loading } = useAuth();
 
@@ -130,18 +132,12 @@ export default function JourneyScreen() {
 
   const scrollRef = useRef<ScrollView>(null);
 
-  // Store layout metrics for each card so we can scroll precisely
   const cardLayout = useRef<Record<string, { y: number; h: number }>>({});
-
-  // Track scroll viewport
   const scrollY = useRef(0);
   const viewportH = useRef(0);
 
-  // Expand / collapse
   const [expandedId, setExpandedId] = useState<string | null>(null);
-
-  // Soft highlight when arriving from Today
-  const [activeHighlight, setActiveHighlight] = useState<string | null>(highlightId);
+  const [activeHighlight, setActiveHighlight] = useState<string | null>(null);
 
   const loadWins = useCallback(async () => {
     if (!session) return;
@@ -156,7 +152,7 @@ export default function JourneyScreen() {
     setLoadingWins(false);
   }, [session]);
 
-  if (!loading && !session) return <Redirect href="/welcome" />;
+  if (!loading && !session) return <Redirect href="/(auth)/welcome" />;
 
   useEffect(() => {
     if (session) loadWins();
@@ -182,14 +178,13 @@ export default function JourneyScreen() {
       .map(([key, v]) => ({ key, ...v }));
   }, [wins]);
 
-  // Best-practice: focus active card only if it’s outside the viewport
   const focusIfNeeded = useCallback(
     (id: string) => {
       const m = cardLayout.current[id];
       if (!m) return;
 
-      const topPadding = 24;
-      const bottomPadding = 24 + (insets.bottom || 0);
+      const topPadding = 16;
+      const bottomPadding = 16 + (insets.bottom || 0);
 
       const currentTop = scrollY.current;
       const currentBottom = currentTop + viewportH.current;
@@ -210,45 +205,51 @@ export default function JourneyScreen() {
     [insets.bottom]
   );
 
-  // Deep-link from Today: scroll + expand
   useEffect(() => {
-    if (!activeHighlight) return;
+    if (!highlightId) return;
 
-    setExpandedId(activeHighlight);
+    setExpandedId(highlightId);
+    setActiveHighlight(highlightId);
 
     requestAnimationFrame(() => {
-      requestAnimationFrame(() => focusIfNeeded(activeHighlight));
+      requestAnimationFrame(() => focusIfNeeded(highlightId));
     });
 
     const t = setTimeout(() => setActiveHighlight(null), 700);
     return () => clearTimeout(t);
-  }, [activeHighlight, focusIfNeeded]);
+  }, [highlightId, focusIfNeeded]);
 
   if (loading || loadingWins) {
     return (
-      <View
-        style={{
-          flex: 1,
-          backgroundColor: theme.colors.bg,
-          justifyContent: "center",
-          alignItems: "center",
-        }}
-      >
-        <Text muted>Loading…</Text>
-      </View>
+      <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.bg }}>
+        <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+          <Text muted>Loading…</Text>
+        </View>
+      </SafeAreaView>
     );
   }
 
-  const bottomInset = insets.bottom + 24;
+  // Utility spacing (still helpful), but we also add a real footer spacer
+  const tabBarHeightGuess = 64;
+  const bottomSpacer = insets.bottom + tabBarHeightGuess + 24;
 
   return (
-    <View style={{ flex: 1, backgroundColor: theme.colors.bg }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.bg }}>
+      {/* ✅ Fixed header (always visible) */}
+      <View style={{ padding: theme.space.lg, paddingBottom: theme.space.sm, gap: theme.space.xs }}>
+        <Text variant="title" style={{ fontWeight: "800" }}>
+          Your Journey
+        </Text>
+        <Text muted>This is your story — one step at a time.</Text>
+      </View>
+
+      {/* ✅ Scrollable content */}
       <ScrollView
         ref={scrollRef}
         keyboardShouldPersistTaps="always"
-        contentInsetAdjustmentBehavior="automatic"
-        contentInset={Platform.OS === "ios" ? { bottom: bottomInset } : undefined}
-        scrollIndicatorInsets={Platform.OS === "ios" ? { bottom: bottomInset } : undefined}
+        contentInsetAdjustmentBehavior="never"
+        contentInset={Platform.OS === "ios" ? { bottom: bottomSpacer } : undefined}
+        scrollIndicatorInsets={Platform.OS === "ios" ? { bottom: bottomSpacer } : undefined}
         onScroll={(e) => {
           scrollY.current = e.nativeEvent.contentOffset.y;
         }}
@@ -257,27 +258,19 @@ export default function JourneyScreen() {
           viewportH.current = e.nativeEvent.layout.height;
         }}
         contentContainerStyle={{
-          padding: theme.space.lg,
-          paddingBottom: Platform.OS === "android" ? bottomInset : theme.space.lg,
+          paddingHorizontal: theme.space.lg,
+          paddingBottom: bottomSpacer,
           gap: theme.space.md,
         }}
         showsVerticalScrollIndicator
       >
-        <View style={{ gap: theme.space.xs }}>
-          <Text muted>This is your story — one step at a time.</Text>
-          <Text muted style={{ fontSize: 12, opacity: 0.6 }}>
-            Tap a moment to see details.
-          </Text>
-        </View>
-
         {grouped.map((g) => (
           <View key={g.key} style={{ gap: theme.space.sm }}>
-            <Text muted style={{ fontSize: 13, opacity: 0.75 }}>
+            <Text muted variant="caption" style={{ opacity: 0.75 }}>
               {formatDayHeading(g.headingIso)}
             </Text>
 
             {g.items.map((w) => {
-              // New fields first; fallback to legacy note if needed
               const legacy = parseLegacyNote(w.note ?? null);
 
               const area = w.area ?? legacy.area;
@@ -313,23 +306,23 @@ export default function JourneyScreen() {
                       });
                     }}
                   >
-                    <CardView highlighted={highlighted}>
-                      <Text style={{ fontWeight: "700" }}>{w.title}</Text>
+                    <CardView highlighted={highlighted} expanded={expanded}>
+                      <Text style={{ fontWeight: "800" }}>{w.title}</Text>
 
                       {expanded ? (
                         <>
-                          {(area || focus || share) ? (
+                          {area || focus || share ? (
                             <View
                               style={{
                                 flexDirection: "row",
                                 flexWrap: "wrap",
-                                gap: 8,
-                                marginTop: theme.space.sm,
+                                gap: 6,
+                                marginTop: theme.space.xs, // tighter to title
                               }}
                             >
                               {area ? <MetaPill text={area} /> : null}
                               {focus ? <MetaPill text={focus} /> : null}
-                              {share ? <MetaPill text="Might help others" /> : null}
+                              {share ? <MetaPill text="Shareable" /> : null}
                             </View>
                           ) : null}
 
@@ -338,9 +331,6 @@ export default function JourneyScreen() {
                               {details}
                             </Text>
                           ) : null}
-
-                          {/* Future: media slot */}
-                          {/* <MediaGrid ... /> */}
                         </>
                       ) : null}
                     </CardView>
@@ -350,7 +340,10 @@ export default function JourneyScreen() {
             })}
           </View>
         ))}
+
+        {/* ✅ Visual “end of list” spacer (prevents “cut off” feeling) */}
+        <View style={{ height: 56 }} />
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }

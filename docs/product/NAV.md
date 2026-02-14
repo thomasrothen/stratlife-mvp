@@ -23,219 +23,92 @@ Places users return to and “live in”.
 - **Today** → `/today`  
   Screen 5 — Home / orientation hub
 
+- **Focus** → `/focus`  
+  Screen 3 — Weekly direction (1–3 items)
+
 - **Journey** → `/journey`  
   Screen 6 — Personal history & memory
 
 - **Settings** → `/settings`  
   Screen 7 — Control & privacy
 
----
-
-### Flows (transient actions)
-Short, task-oriented experiences that always return to a destination.
-
-- **Life Check** → `/life-check`  
-  Screen 2 — Baseline snapshot  
-  Starts from Today, ends at Focus or Today
-
-- **Focus Wall** → `/focus`  
-  Screen 3 — Direction & attention  
-  Starts after Life Check or from Today, ends at Today
+### Flows (short-lived, modal-style)
+Short actions that begin and end cleanly.
 
 - **Capture Moment** → `/capture`  
-  Screen 4 — Daily compounding action  
-  Starts from Today, ends back at Today
+  Screen 4 — atomic action; returns to origin
 
-Rule:
-Flows are never places to browse.
-They exist to complete one action and then disappear.
+- **Life Check** → `/life-check`  
+  Screen 2 — baseline snapshot; returns to Today
 
 ---
 
-## 2️⃣ Interaction Rules (Defaults, Limits, Empty States)
+## 2️⃣ Navigation Structure (MVP)
 
-### Screen 1 — Welcome (`/welcome`)
+### Entry
+- App opens at `/`
+- Redirect logic:
+  - No session → `/welcome`
+  - Session → `/today`
 
-Defaults:
-- Intro text + “Get started”
-- No login friction until action
+### Primary movement
+- Users switch between destinations using **bottom tabs**:
+  - Today / Focus / Journey / Settings
 
-Rules:
-- “Get started” → email / code flow
-- Once authenticated → redirect to Today
-
-Back behavior:
-- Back disabled or exits app
-
----
-
-### Screen 2 — Life Check (`/life-check`)
-
-Defaults:
-- All sliders start at neutral midpoint
-- Reflection field empty
-
-Limits:
-- Reflection text: max 240 characters
-
-Empty states:
-- Reflection is optional
-- User may continue without typing
-
-Save behavior:
-- “Continue” saves snapshot
-- Navigates to Focus Wall or Today
-
-Back behavior:
-- Back → Today (discard allowed)
+### Secondary movement
+- Modals:
+  - Today → Capture
+  - Today → Life Check (as a modal flow)
 
 ---
 
-### Screen 3 — Focus Wall (`/focus`)
+## 3️⃣ Interaction Contracts (Locked)
 
-Defaults:
-- Focus list empty
-- Hint: “One or two things are enough”
+### Today (Home)
+- Purpose: **orientation + glimpse**
+- Shows:
+  - Weekly rhythm glimpse
+  - Add Moment (primary)
+  - Recent moments (small list)
+  - CTA to Journey
+- No infinite scroll feed.
 
-Limits:
-- Max active focus items: 3
-- Focus text: max 60 characters
-- Life area selection required per focus
+### Journey
+- Purpose: **memory + rereading**
+- Cards are collapsed by default.
+- Tap a card:
+  - expands inline (details + tags)
+  - only one card open at a time
+- When navigated from Today with a selected item:
+  - Journey opens with that item expanded and highlighted.
 
-Empty states:
-- No focus yet → CTA “Add your first focus”
+### Focus
+- Purpose: weekly direction (1–3)
+- One input, small set, minimal friction
+- Calm metadata (area) allowed but secondary
 
-Save behavior:
-- At least 1 focus required to save
-- Save returns to Today
-
-Back behavior:
-- Back → Today
-
----
-
-### Screen 4 — Capture Moment (`/capture`)
-
-Defaults:
-- Text input focused
-- Life area optional
-- Focus link optional
-- “This might help others one day” unchecked
-
-Limits:
-- Moment text required
-- Max 280–500 characters (MVP choice)
-
-Empty states:
-- Save disabled until text exists
-
-Save behavior:
-- Save → return to previous screen (usually Today)
-- No draft persistence in MVP
-
-Back behavior:
-- Back → Today (discard)
-
----
-
-### Screen 5 — Today (`/today`)
-
-Defaults:
-- Orientation blocks only:
-  - Weekly rhythm (dots)
-  - Focus preview
-  - Recent moments (glimpse)
-
-Limits:
-- Recent moments shown: max 3
-- Focus preview shown: max 2–3
-
-Empty states:
-- No moments → “Start with something small”
-- No focus → CTA “Add a focus”
-
-Primary actions:
-- “+ Add moment” → Capture Moment
-- “See your journey →” → Journey
-
----
-
-### Screen 6 — Journey (`/journey`)
-
-Defaults:
-- Reverse chronological list
-- Grouped by date
-
-Limits:
-- No analytics or gamification
-- No public content in MVP
-
-Empty states:
-- No entries → “Your journey starts with your first moment”
-- CTA to Capture Moment
-
-Actions:
-- Tap entry → no detail view in MVP
-
-Back behavior:
-- Back → Today
-
----
-
-### Screen 7 — Settings (`/settings`)
-
-Defaults:
-- Name placeholder
-- Reminder default off or preset time
-
-Limits:
-- Name: max 30 characters
-
-Actions:
-- Theme toggle
-- Privacy control
-- Log out
-
-Back behavior:
-- Back → Today
-
----
-
-## 3️⃣ Navigation Map (Routes & Entry Points)
-
-Canonical routes:
-- `/` → redirect gate (Welcome or Today)
-- `/welcome`
-- `/today`
-- `/capture`
-- `/journey`
-- `/life-check`
-- `/focus`
-- `/settings`
-
-Entry logic:
-- First launch → `/welcome`
-- Authenticated return → `/today`
+### Settings
+- Purpose: control + privacy
+- Minimal options
+- No “social” toggles in MVP
 
 ---
 
 ## 4️⃣ Back Navigation Rules (Locked)
 
+- **Destinations (tabs)** do not “stack back” into each other.
+- **Modals** dismiss back to the previously active destination.
 - Welcome → no back into app
-- Capture → Today
-- Life Check → Today
-- Focus Wall → Today
-- Journey → Today
-- Settings → Today
+- Capture → dismiss back to the originating destination (usually Today)
+- Life Check → dismiss back to Today
 
-Today is the home base.
-All paths lead back to Today.
+Today is the default home tab.
 
 ---
 
 ## 5️⃣ MVP Navigation Philosophy
 
-- No bottom tab bar in v1
+- **Bottom tab bar is used in v1** for calm orientation between the 4 destinations.
 - No discovery or feed
 - No browsing other people
 - Navigation should feel invisible
@@ -246,3 +119,14 @@ Capturing.
 Remembering.
 
 Not consuming.
+
+---
+
+## 6️⃣ Open Navigation Questions (Decide later)
+
+1. **Tab bar visibility**
+   - Always visible (current)
+   - Auto-hide on scroll
+2. **Destinations**
+   - Does **Settings** belong as a tab long-term?
+   - Should Focus be a tab or a short flow?

@@ -6,5 +6,9 @@ export default function Index() {
 
   if (loading) return null;
 
-  return session ? <Redirect href="/today" /> : <Redirect href="/welcome" />;
+  return session ? (
+    <Redirect href="/(app)/today" />
+  ) : (
+    <Redirect href="/(auth)/welcome" />
+  );
 }

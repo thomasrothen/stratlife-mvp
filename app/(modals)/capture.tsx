@@ -19,7 +19,8 @@ export default function CaptureMomentScreen() {
   const router = useRouter();
   const { session, loading } = useAuth();
 
-  if (!loading && !session) return <Redirect href="/welcome" />;
+  // ✅ Fix: auth group route
+  if (!loading && !session) return <Redirect href="/(auth)/welcome" />;
 
   // MVP contract: title is the main saved card headline
   const [title, setTitle] = useState("");
@@ -54,7 +55,6 @@ export default function CaptureMomentScreen() {
       };
 
       const { error } = await supabase.from("wins").insert(payload);
-
       if (error) throw error;
 
       router.back();
@@ -147,7 +147,9 @@ export default function CaptureMomentScreen() {
                   borderRadius: 5,
                   borderWidth: 1,
                   borderColor: theme.colors.border,
-                  backgroundColor: helpOthers ? theme.colors.primary : "transparent",
+                  backgroundColor: helpOthers
+                    ? theme.colors.primary
+                    : "transparent",
                   opacity: helpOthers ? 1 : 0.35,
                 }}
               />

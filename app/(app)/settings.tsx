@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { View } from "react-native";
 import { Redirect } from "expo-router";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { theme } from "@/theme/theme";
 import { Text } from "@/ui/Text";
 import { Card } from "@/ui/Card";
@@ -35,93 +36,84 @@ export default function SettingsScreen() {
   const [reminder, setReminder] = useState("20:30");
   const [themeMode, setThemeMode] = useState<"Light" | "Dark">("Light");
 
-  const reminderValid = useMemo(
-    () => normalizeTime(reminder) !== null,
-    [reminder]
-  );
+  const reminderValid = useMemo(() => normalizeTime(reminder) !== null, [reminder]);
 
-  // Not signed in → Welcome
-  if (!loading && !session) return <Redirect href="/welcome" />;
+  if (!loading && !session) return <Redirect href="/(auth)/welcome" />;
 
   async function logout() {
     await supabase.auth.signOut();
   }
 
   return (
-    <View
-      style={{
-        flex: 1,
-        backgroundColor: theme.colors.bg,
-        padding: theme.space.lg,
-        gap: theme.space.md,
-      }}
-    >
-      <View style={{ gap: theme.space.xs }}>
-        <Text variant="title" style={{ fontWeight: "700" }}>
-          Settings
-        </Text>
-        <Text muted>
-          You decide what stays private — and what inspires others.
-        </Text>
-      </View>
-
-      <Card>
-        <Text style={{ fontWeight: "600" }}>Name</Text>
-        <Input
-          value={name}
-          onChangeText={setName}
-          placeholder="Your name"
-          style={{ marginTop: theme.space.sm }}
-        />
-      </Card>
-
-      <Card>
-        <Text style={{ fontWeight: "600" }}>Daily reminder</Text>
-        <Text muted style={{ marginTop: theme.space.xs }}>
-          Time (HH:MM), e.g. 20:30
-        </Text>
-        <Input
-          value={reminder}
-          onChangeText={setReminder}
-          placeholder="20:30"
-          style={{ marginTop: theme.space.sm }}
-        />
-        {!reminderValid ? (
-          <Text muted style={{ marginTop: theme.space.xs, opacity: 0.75 }}>
-            Please enter a valid time like 20:30.
+    <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.bg }}>
+      <View
+        style={{
+          flex: 1,
+          padding: theme.space.lg,
+          gap: theme.space.lg,
+        }}
+      >
+        {/* Header */}
+        <View style={{ gap: theme.space.xs }}>
+          <Text variant="title" style={{ fontWeight: "800" }}>
+            Settings
           </Text>
-        ) : null}
-      </Card>
-
-      <Card>
-        <Text style={{ fontWeight: "600" }}>Theme</Text>
-        <View style={{ flexDirection: "row", gap: 10, marginTop: theme.space.sm }}>
-          <Button
-            title="Light"
-            variant={themeMode === "Light" ? "primary" : "secondary"}
-            onPress={() => setThemeMode("Light")}
-          />
-          <Button
-            title="Dark"
-            variant={themeMode === "Dark" ? "primary" : "secondary"}
-            onPress={() => setThemeMode("Dark")}
-          />
+          <Text muted>You decide what stays private — and what inspires others.</Text>
         </View>
-        <Text muted style={{ marginTop: theme.space.sm }}>
-          (MVP) Theme toggle is UI-only for now.
-        </Text>
-      </Card>
 
-      <Card>
-        <Text style={{ fontWeight: "600" }}>Privacy</Text>
-        <Text muted style={{ marginTop: theme.space.xs }}>
-          You decide what stays private and what might help others one day.
-        </Text>
-      </Card>
+        <View style={{ gap: theme.space.md }}>
+          <Card>
+            <Text style={{ fontWeight: "700" }}>Name</Text>
+            <View style={{ marginTop: theme.space.sm }}>
+              <Input value={name} onChangeText={setName} placeholder="Your name" />
+            </View>
+          </Card>
 
-      <View style={{ marginTop: theme.space.sm }}>
-        <Button title="Log out" variant="secondary" onPress={logout} />
+          <Card>
+            <Text style={{ fontWeight: "700" }}>Reminder time</Text>
+            <Text muted style={{ marginTop: theme.space.xs }}>
+              Optional. A gentle nudge to reflect.
+            </Text>
+
+            <View style={{ marginTop: theme.space.sm }}>
+              <Input
+                value={reminder}
+                onChangeText={setReminder}
+                placeholder="20:30"
+                keyboardType="numbers-and-punctuation"
+              />
+            </View>
+
+            {!reminderValid ? (
+              <Text muted variant="caption" style={{ marginTop: theme.space.xs }}>
+                Please use HH:MM (e.g., 20:30)
+              </Text>
+            ) : null}
+          </Card>
+
+          <Card>
+            <Text style={{ fontWeight: "700" }}>Theme</Text>
+            <Text muted style={{ marginTop: theme.space.xs }}>
+              (MVP placeholder)
+            </Text>
+
+            <View style={{ flexDirection: "row", gap: 10, marginTop: theme.space.sm }}>
+              <Button
+                title="Light"
+                variant={themeMode === "Light" ? "primary" : "secondary"}
+                onPress={() => setThemeMode("Light")}
+              />
+              <Button
+                title="Dark"
+                variant={themeMode === "Dark" ? "primary" : "secondary"}
+                onPress={() => setThemeMode("Dark")}
+              />
+            </View>
+          </Card>
+
+          <Button title="Log out" variant="secondary" onPress={logout} />
+        </View>
       </View>
-    </View>
+    </SafeAreaView>
   );
 }

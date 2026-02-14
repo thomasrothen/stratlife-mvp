@@ -45,9 +45,9 @@ Day 5–6
 ⸻
 
 Day 7
-	•	Internal review
-	•	Remove friction
-	•	No new features
+	•	Outlook integration spike (scope decision + smallest end-to-end slice)
+	•	Internal review + remove friction
+	•	No new core features beyond Outlook hook
 
 ⸻
 
@@ -68,88 +68,75 @@ Day 10–11
 ⸻
 
 Day 12–13
-	•	Capture Moment screen
-	•	Impact intention toggle
-	•	Link to focus & life area
+	•	Capture moment screen
+	•	Write moment to DB
+	•	Return to Today
+	•	Show it in Journey
 
 ⸻
 
 Day 14
-	•	Home / Today screen
-	•	Show Life Check + Focus + Moments
+	•	Weekly system review
+	•	Stability pass
 
 ⸻
 
-🟦 WEEK 3 — Polish & Stability
+🟩 WEEK 3 — Make It Real
 
 Day 15–16
-	•	Journey (History) screen
-	•	Chronological list
-	•	Empty states
+	•	Journey screen
+	•	Group by date
+	•	Tap to expand moment
+	•	Long-term storage UX
 
 ⸻
 
-Day 17
-	•	Copy polish
-	•	Microcopy review
-	•	Tone consistency
+Day 17–18
+	•	Focus integration into Today
+	•	Show current focus
+	•	Soft reminder
 
 ⸻
 
-Day 18–19
+Day 19–20
+	•	Settings (privacy + export)
+	•	Log out
+	•	Basic profile
+
+⸻
+
+Day 21
+	•	Internal review
+	•	UX polish
+	•	No new features
+
+⸻
+
+🟨 WEEK 4 — Polish + Release Prep
+
+Day 22–24
+	•	Animations (minimal)
+	•	Edge cases
 	•	Error handling
-	•	Offline-safe UX
-	•	Loading states
-
-⸻
-
-Day 20–21
-	•	Internal dogfooding
-	•	Use it daily
-	•	Fix only what hurts
-
-⸻
-
-🟦 WEEK 4 — Launch-Ready
-
-Day 22–23
-	•	Visual polish
-	•	Spacing
-	•	Animations (very subtle)
-
-⸻
-
-Day 24
-	•	App Store screenshots
-	•	App Store copy final check
+	•	Offline tolerance
 
 ⸻
 
 Day 25–26
-	•	TestFlight / Internal testing
-	•	Crash fixes only
+	•	App Store assets
+	•	Screenshots
+	•	App icon
 
 ⸻
 
-Day 27
-	•	App Store submission
+Day 27–28
+	•	Beta test with 3–5 people
+	•	Fix friction
 
 ⸻
 
-Day 28–30
-	•	Wait
-	•	Observe
-	•	Write down:
-	•	what feels right
-	•	what feels wrong
-	•	Do not add features
+Day 29–30
+	•	Final polish
+	•	Testflight / Release
 
 ⸻
-
-North Star Metric (ONLY ONE)
-
-Users who complete
-Life Check → Focus → Moment
-at least 3 times in a week
-
-If this works → Stratlife lives.

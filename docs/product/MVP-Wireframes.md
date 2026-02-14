@@ -9,17 +9,21 @@ Design contract:
 - One primary action per screen
 - Progress is quiet, but visible
 
+Navigation presentation (MVP implementation):
+- Destinations use a quiet bottom tab bar: Today | Focus | Journey | Settings
+- Flows open as modals: Capture, Life Check
+
 ---
 
 |  **Wireframe #**  |  **Screen name (product)**  |  **Internal meaning**  | 
 |---|---|---|
 |  Screen 1  |  **Welcome**  |  Emotional entry  | 
-|  Screen 2  |  **Life Check**  |  Baseline snapshot  | 
-|  Screen 3  |  **Focus Wall**  |  Direction  | 
-|  Screen 4  |  **Capture Moment**  |  Atomic action  | 
-|  Screen 5  |  **Today**  |  Orientation (Home)  | 
-|  Screen 6  |  **Journey**  |  History / memory  | 
-|  Screen 7  |  **Settings**  |  Control  | 
+|  Screen 2  |  **Life Check**  |  Baseline snapshot (modal flow)  | 
+|  Screen 3  |  **Focus**  |  Weekly direction (destination)  | 
+|  Screen 4  |  **Capture Moment**  |  Atomic action (modal flow)  | 
+|  Screen 5  |  **Today**  |  Orientation (destination)  | 
+|  Screen 6  |  **Journey**  |  History / memory (destination)  | 
+|  Screen 7  |  **Settings**  |  Control (destination)  | 
 
 ---
 
@@ -42,7 +46,7 @@ Notes:
 
 ---
 
-## 🟢 Screen 2 — Life Check
+## 🟢 Screen 2 — Life Check (Modal)
 
 **Purpose:** Gentle self-assessment
 
@@ -60,7 +64,7 @@ Money         😔 ─── 😊
 Anything you want to remember?  
 [ ______________________ ]
 
-[ Continue ]
+[ Continue ]   [ Close ]
 
 Notes:
 - Sliders capture feelings, not metrics
@@ -69,12 +73,12 @@ Notes:
 
 ---
 
-## 🟢 Screen 3 — Focus Wall
+## 🟢 Screen 3 — Focus (Destination)
 
 **Purpose:** Direction without overload
 
 Your Focus  
-What matters right now — for your life?
+What deserves your energy this week?
 
 [ + Add focus ]
 
@@ -86,34 +90,37 @@ One or two things are enough.
 [ Save focus ]
 
 Notes:
-- Implicit max of 2–3 focus items
-- Focus replaces traditional goal-setting
+- Max of 1–3 focus items
+- Weekly persistence (current week auto-created)
 - Focus is temporary by design
 
 ---
 
-## 🟢 Screen 4 — Capture Moment (FINAL)
+## 🟢 Screen 4 — Capture Moment (Modal) — FINAL
 
 **Purpose:** Daily compounding mechanism
 
 Capture a Moment  
 What moved you forward today?
 
-[ ______________________________  
-  ______________________________ ]
+Title (required)  
+[ ______________________________ ]
+
+Details (optional)  
+[ ______________________________ ]
 
 Life area (optional):  
-• Spirit
+[ Spirit ]
 
 Link to focus (optional):  
-• More calm mornings
+[ More calm mornings ]
 
 ☐ This might help others one day
 
 Small steps count.  
 Impact grows over time.
 
-[ Save moment ]
+[ Save moment ]  [ Close ]
 
 Notes:
 - Core atomic action of Stratlife
@@ -122,20 +129,14 @@ Notes:
 
 ---
 
-## 🟢 Screen 5 — Home / Today
+## 🟢 Screen 5 — Today (Destination)
 
 **Purpose:** Orientation + gentle reflection
 
 Your Life — Today
 
-Life Check  
-Spirit ▓▓▓▓░  
-Fit    ▓▓▓░░  
-…
-
-Your Focus  
-• More calm mornings  
-• Finish proposal  
+Weekly rhythm  
+• • ○ • • • ○
 
 Recent Moments  
 • Had a calm start to the day  
@@ -150,28 +151,28 @@ Notes:
 
 ---
 
-## 🟢 Screen 6 — Journey
+## 🟢 Screen 6 — Journey (Destination)
 
 **Purpose:** Narrative memory, not analytics
 
 Your Journey
 
 Mon, Feb 3  
-Spirit  
 “Had a calm start to the day”
 
 Sun, Feb 2  
-Business  
 “Finished proposal draft”
+
+Tap a moment to expand.
 
 Notes:
 - Chronological and human
+- Progressive disclosure allowed
 - No streaks, points, or gamification
-- This is a life story, not a score
 
 ---
 
-## 🟢 Screen 7 — Settings
+## 🟢 Screen 7 — Settings (Destination)
 
 **Purpose:** Control & trust
 

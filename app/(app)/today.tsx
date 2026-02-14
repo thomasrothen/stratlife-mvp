@@ -1,6 +1,7 @@
 import { View, ScrollView, Pressable } from "react-native";
 import { useRouter, Redirect, useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { theme } from "@/theme/theme";
 import { Text } from "@/ui/Text";
 import { Card } from "@/ui/Card";
@@ -13,8 +14,6 @@ type Win = {
   title: string;
   created_at: string;
 };
-
-/* ---------- date helpers ---------- */
 
 function startOfDay(d: Date) {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate());
@@ -33,7 +32,8 @@ function formatWinDate(iso: string) {
   const now = new Date();
 
   const dayDiff = Math.floor(
-    (startOfDay(now).getTime() - startOfDay(d).getTime()) / (1000 * 60 * 60 * 24)
+    (startOfDay(now).getTime() - startOfDay(d).getTime()) /
+      (1000 * 60 * 60 * 24)
   );
 
   if (dayDiff === 0) return "Today";
@@ -42,8 +42,6 @@ function formatWinDate(iso: string) {
 
   return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
-
-/* ---------- main ---------- */
 
 export default function TodayScreen() {
   const router = useRouter();
@@ -66,7 +64,7 @@ export default function TodayScreen() {
     setLoadingWins(false);
   }, [session]);
 
-  if (!loading && !session) return <Redirect href="/welcome" />;
+  if (!loading && !session) return <Redirect href="/(auth)/welcome" />;
 
   useEffect(() => {
     if (session) loadWins();
@@ -101,66 +99,39 @@ export default function TodayScreen() {
 
   if (loading || loadingWins) {
     return (
-      <View
-        style={{
-          flex: 1,
-          justifyContent: "center",
-          alignItems: "center",
-          backgroundColor: theme.colors.bg,
-        }}
-      >
-        <Text muted>Loading…</Text>
-      </View>
+      <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.bg }}>
+        <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+          <Text muted>Loading…</Text>
+        </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View
-      style={{
-        flex: 1,
-        padding: theme.space.lg,
-        backgroundColor: theme.colors.bg,
-      }}
-    >
-      {/* Header / Orientation */}
-      <View style={{ gap: theme.space.md }}>
-        <View
-          style={{
-            flexDirection: "row",
-            justifyContent: "space-between",
-            alignItems: "flex-start",
-          }}
-        >
-          <View style={{ flex: 1, paddingRight: theme.space.md }}>
-            <Text variant="title" style={{ fontWeight: "700" }}>
-              Your Life — Today
-            </Text>
-            <Text muted style={{ marginTop: theme.space.xs }}>
-              Small steps count. Impact grows over time.
-            </Text>
-          </View>
-
-          <Pressable onPress={() => router.push("/settings")}>
-            <Text muted style={{ fontSize: 13, opacity: 0.75, paddingTop: 6 }}>
-              Settings
-            </Text>
-          </Pressable>
+    <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.bg }}>
+      <View
+        style={{
+          flex: 1,
+          padding: theme.space.lg,
+          gap: theme.space.lg,
+        }}
+      >
+        {/* Header */}
+        <View style={{ gap: theme.space.xs }}>
+          <Text variant="title" style={{ fontWeight: "800" }}>
+            Your Life — Today
+          </Text>
+          <Text muted>Small steps count. Impact grows over time.</Text>
         </View>
 
         {/* Weekly rhythm */}
         <Card>
-          <Text style={{ fontWeight: "600" }}>Weekly rhythm</Text>
+          <Text style={{ fontWeight: "700" }}>Weekly rhythm</Text>
           <Text muted style={{ marginTop: theme.space.xs }}>
             Just a glimpse — no pressure.
           </Text>
 
-          <View
-            style={{
-              flexDirection: "row",
-              gap: 8,
-              marginTop: theme.space.md,
-            }}
-          >
+          <View style={{ flexDirection: "row", gap: 8, marginTop: theme.space.md }}>
             {weekData.map((d, i) => (
               <View
                 key={i}
@@ -190,75 +161,66 @@ export default function TodayScreen() {
 
         {/* Primary action */}
         <Button title="+ Add moment" onPress={() => router.push("/capture")} />
-      </View>
 
-      {/* Glimpse list */}
-      <View style={{ flex: 1, marginTop: theme.space.md }}>
-        <ScrollView
-          contentContainerStyle={{
-            gap: theme.space.sm,
-            paddingBottom: theme.space.xl,
-          }}
-          showsVerticalScrollIndicator
-        >
-          {wins.length === 0 ? (
-            <Card>
-              <Text style={{ fontWeight: "600" }}>No moments yet.</Text>
-              <Text muted style={{ marginTop: theme.space.xs }}>
-                Start with something small — one honest sentence.
-              </Text>
+        {/* Glimpse list */}
+        <View style={{ flex: 1 }}>
+          <ScrollView
+            contentContainerStyle={{
+              gap: theme.space.sm,
+              paddingBottom: theme.space.xl,
+            }}
+            showsVerticalScrollIndicator
+          >
+            {wins.length === 0 ? (
+              <Card>
+                <Text style={{ fontWeight: "700" }}>No moments yet.</Text>
+                <Text muted style={{ marginTop: theme.space.xs }}>
+                  Start with something small — one honest sentence.
+                </Text>
+                <View style={{ marginTop: theme.space.md }}>
+                  <Button title="Capture a moment" onPress={() => router.push("/capture")} />
+                </View>
+              </Card>
+            ) : (
+              <>
+                <Text muted variant="caption" style={{ opacity: 0.75 }}>
+                  Recent moments
+                </Text>
 
-              <View style={{ marginTop: theme.space.md }}>
-                <Button title="Capture a moment" onPress={() => router.push("/capture")} />
-              </View>
-            </Card>
-          ) : (
-            <>
-              <Text muted style={{ fontSize: 13, opacity: 0.75 }}>
-                Recent moments
-              </Text>
+                {visibleWins.map((win) => (
+                  <Pressable
+                    key={win.id}
+                    onPress={() => router.push(`/journey?highlight=${win.id}`)}
+                  >
+                    <Card>
+                      <Text style={{ fontWeight: "700" }}>{win.title}</Text>
+                      <Text muted variant="caption" style={{ marginTop: theme.space.xs, opacity: 0.75 }}>
+                        {formatWinDate(win.created_at)}
+                      </Text>
+                    </Card>
+                  </Pressable>
+                ))}
 
-              {visibleWins.map((win) => (
-                <Pressable
-                  key={win.id}
-                  onPress={() => router.push(`/journey?highlight=${win.id}`)}
-                >
+                {hasMore ? (
                   <Card>
-                    <Text style={{ fontWeight: "600" }}>{win.title}</Text>
-                    <Text
-                      muted
-                      style={{
-                        marginTop: theme.space.xs,
-                        fontSize: 13,
-                        opacity: 0.75,
-                      }}
-                    >
-                      {formatWinDate(win.created_at)}
+                    <Text style={{ fontWeight: "700" }}>Want the full story?</Text>
+                    <Text muted style={{ marginTop: theme.space.xs }}>
+                      Your Journey holds everything you’ve captured.
                     </Text>
+                    <View style={{ marginTop: theme.space.md }}>
+                      <Button
+                        title="See your journey"
+                        variant="secondary"
+                        onPress={() => router.push("/journey")}
+                      />
+                    </View>
                   </Card>
-                </Pressable>
-              ))}
-
-              {hasMore ? (
-                <Card>
-                  <Text style={{ fontWeight: "600" }}>Want the full story?</Text>
-                  <Text muted style={{ marginTop: theme.space.xs }}>
-                    Your Journey holds everything you’ve captured.
-                  </Text>
-
-                  <View style={{ marginTop: theme.space.md }}>
-                    <Button
-                      title="See your journey"
-                      variant="secondary"
-                      onPress={() => router.push("/journey")}
-                    />
-                  </View>
-                </Card>
-              ) : null}
-            </>
-          )}
-        </ScrollView>
+                ) : null}
+              </>
+            )}
+          </ScrollView>
+        </View>
       </View>
-    </View>
+    </SafeAreaView>
   );
 }

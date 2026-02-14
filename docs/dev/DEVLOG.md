@@ -5,22 +5,56 @@ It is intentionally opinionated: once something is marked “locked”, we stop 
 
 ---
 
-## Day 6 — Planned
+## Day 7 — Planned
 
-**Theme:** Stability, clarity, and future-proofing
+**Theme:** Outlook integration spike + tighten “orientation rails”
 
 ### Goals
-1. Verify and clean up legacy `note` data.
-2. Subtle expand/collapse animation in Journey.
-3. Tighten Capture → Journey loop:
-   - After save, navigate to Journey and highlight new entry.
-4. Navigation contract review & final polish.
-5. Optional microcopy improvements.
+1. **Outlook integration (MVP-friendly)**
+   - Decide *scope*: (A) Microsoft sign-in via Supabase provider, (B) “Add reminder” deep link, or (C) export `.ics`.
+   - Implement the smallest end-to-end slice (no background sync yet).
+2. **Navigation contract decision**
+   - Keep bottom tabs for now, but document the open question:
+     - always visible vs auto-hide on scroll vs fewer destinations
+3. **Polish pass**
+   - Make Today / Focus / Settings spacing & headers consistent with Journey.
 
 ### Explicit non-goals
-- No new features
 - No social layer
 - No analytics
+- No “sync everything” Outlook feature (yet)
+
+---
+
+## Day 6 — Navigation Stabilization + Calm UI Pass
+
+**Status:** ✅ Stable / Navigation + Journey behavior locked
+
+### What we shipped
+
+#### 1. Navigation architecture
+- Confirmed **Expo Router route groups**:
+  - `(auth)` for Welcome
+  - `(app)` for main app (Tabs)
+  - `(modals)` for Capture + Life Check flows
+- Adopted **bottom tabs** for MVP destinations (Today / Focus / Journey / Settings).
+- Fixed multiple routing edge cases from earlier refactors (missing routes, empty `/` behavior).
+
+#### 2. Journey screen UX contract (locked)
+- **Header stays visible** (“Your Journey” + subtitle) via fixed header outside the ScrollView.
+- **Expand/collapse** remains tap-to-toggle (one open at a time).
+- **Metadata pills** moved to calm “tags” (theme-based, smaller, secondary).
+- **End-of-list breathing room** to avoid the “cut off under tab bar” feel.
+
+#### 3. Tab bar integration (calm baseline)
+- No shadows / no floating.
+- Hairline divider + neutral background.
+- Outline icons (avoid “loud” filled states).
+
+### Notes / open decisions
+- **Tab bar strategy**: keep visible for now. Revisit:
+  - always visible vs hide on scroll
+  - whether Settings belongs as a tab long-term
 
 ---
 
@@ -30,154 +64,73 @@ It is intentionally opinionated: once something is marked “locked”, we stop 
 
 ### What we shipped
 
-#### 1. Journey interaction (expand + focus)
-- Implemented **tap-to-expand** cards in Journey.
-- Active card now **follows user focus**:
-  - Previous card collapses
-  - New card expands
-  - View scrolls only when needed (best-practice behavior).
-- Fixed unreliable tap handling inside `ScrollView` using:
-  - `TouchableOpacity`
-  - `onPressIn`
-  - explicit layout tracking per card.
-- Soft highlight for deep-linked cards from Today (`?highlight=id`).
-- Bottom scrolling corrected using **safe-area–aware content inset** (no more clipped cards).
+#### 1. Journey interaction (expand/collapse)
+- Implemented expandable cards (tap to open, tap another to switch focus).
+- Only one card can be expanded at a time.
+- Added best-practice scroll behavior:
+  - If the selected card is already fully visible → do not scroll.
+  - If it’s partially hidden → scroll only enough to reveal.
 
-#### 2. Structured data model (important)
-- Moved away from packing metadata into a single `note` blob.
-- Introduced **proper columns** in `wins`:
-  - `title`
-  - `details`
-  - `area`
-  - `focus`
-  - `share`
-- Updated app to **write structured fields** instead of parsing text.
-- Added safe **legacy fallback** for older rows still using `note`.
+#### 2. “Selected card” navigation loop
+- Today → tap recent moment → Journey opens with the moment **auto-expanded**.
+- Focus is updated to the most recently selected moment.
 
-#### 3. Capture flow refined
-- Clear separation:
-  - **Title** = headline (required)
-  - **Details** = optional body
-  - **Area / Focus / Share** = optional metadata
-- Capture UI now matches how data is stored and displayed.
-- MVP contract clarified: *small, honest moments first*.
+#### 3. Data model cleanup
+- Began migration away from “stuffed note field” (area/focus/share inside text).
+- Introduced normalized columns:
+  - `area`, `focus`, `share`, `details`
+- Added legacy parsing fallback for older notes.
 
-#### 4. Today screen hierarchy confirmed
-- Today = **orientation + action**, not consumption.
-- Cards show:
-  - title
-  - relative time
-- Tap → deep link into Journey (focused entry).
-- Removed logout from Today (now only in Settings).
-
-### Decisions locked in
-- Journey uses **progressive disclosure** (collapsed by default).
-- Interaction logic lives in screens, not base UI components.
-- Structured data > clever text parsing.
-- Today is a *glimpse*, Journey is the *story*.
-
-### Known follow-ups
-- Remove legacy `note` column once backfill is complete.
-- Introduce media support on Journey cards later.
+### Locked decisions
+- Journey stays calm: no animations, no feed behavior.
+- Expand/collapse is the core interaction (not a separate “detail screen” for MVP).
 
 ---
 
-## Day 4 — Navigation & Structural Cleanup
-
-**Status:** ✅ Stable
-
-### What we shipped
-- Clean Expo Router structure:
-  - `(auth)` for authentication
-  - `(app)` for core screens
-  - `(modals)` for transient flows
-- File names aligned with screen purpose:
-  - `today.tsx`
-  - `journey.tsx`
-  - `capture.tsx`
-  - `settings.tsx`
-- Navigation rules clarified:
-  - Capture opens as modal
-  - Journey reachable from Today
-  - Logout only in Settings
-
-### Navigation principles locked
-- One clear primary action per screen
-- Back behavior must always feel obvious
-- Modals never replace destinations
-
----
-
-## Day 3 — Home / Today Philosophy Locked
+## Day 4 — Home Screen Philosophy Locked (Orientation > Archive)
 
 **Status:** ✅ Stable / UI contract locked
 
-### Today screen purpose
-> Orientation + glimpse — not archive, not analysis.
+### What we shipped
+- Locked the **Home/Index screen contract**: orientation + glimpse, not consumption.
+- Weekly rhythm dots + subtle ring for **today**.
+- “Add moment” is the only primary action.
+- Journey is secondary depth.
+
+### Locked decisions
+- Home is not an archive.
+- Home shows only a small, intentional slice.
+
+---
+
+## Day 3 — Auth + Skeleton
+
+**Status:** ✅ Working baseline
 
 ### What we shipped
-- Weekly rhythm dots (glimpse, not score)
-- Primary CTA: **Add moment**
-- Recent moments shown as a *preview*, not a list
-
-### What Today explicitly does NOT do
-- No full metadata display
-- No deep reflection
-- No scrolling through history
+- Supabase email auth
+- Session handling / redirect gate
+- Welcome screen entry
 
 ---
 
-## Day 2 — Screen Model & Flow Decisions
+## Day 2 — Navigation Skeleton
 
-**Status:** ✅ Locked
+**Status:** ✅ Established
 
-### Screen model
-We separated **destinations** from **actions**:
-
-#### Destinations (places you return to)
-- Today
-- Journey
-- Settings
-
-#### Transient actions (flows)
-- Welcome / Auth
-- Capture Moment
-
-### Key decisions
-- **Capture is a modal**, not a destination.
-- **Journey is the archive** (meaning over time).
-- **Today is orientation + action**, not consumption.
+### What we shipped
+- Expo Router route groups scaffold
+- Core screens created (Today, Journey, Settings, Capture)
 
 ---
 
-## Day 1 — Vision, Scope & MVP Spine
+## Day 1 — Repo + Tokens
 
-**Status:** ✅ Locked
+**Status:** ✅ Created
 
-### What we decided
-- Stratlife is **not a habit tracker** and not a social feed.
-- Core promise:
-  > *Most growth happens quietly. Stratlife helps you notice it — and turn it into shared inspiration.*
-- MVP focuses on:
-  - noticing progress
-  - capturing small, honest moments
-  - reflecting over time
-
-### Core life areas (initial)
-- Spirit
-- Fit
-- Connect
-- Experience
-- Happy
-- Business
-- Money
-
-### Early constraints (important)
-- No gamification
-- No streak pressure
-- No infinite feeds
-- Calm > clever
+### What we shipped
+- Expo + TypeScript baseline
+- Theme tokens (colors/space/radius/font)
+- UI components scaffold (Text/Card/Button/Input)
 
 ---
-
-_End of devlog._
