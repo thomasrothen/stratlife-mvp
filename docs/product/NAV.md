@@ -1,3 +1,4 @@
+# NAV.md
 # Stratlife — NAV (MVP Navigation & Interaction Contract)
 #artifact #product #navigation #mvp
 
@@ -9,6 +10,7 @@ Design principles:
 - Calm over urgency
 - One primary action per screen
 - Flows are short, intentional, and end cleanly
+- Titles match destinations (tab title = screen title)
 
 ---
 
@@ -17,29 +19,29 @@ Design principles:
 ### Destinations (persistent screens)
 Places users return to and “live in”.
 
-- **Welcome** → `/welcome`  
-  Screen 1 — Emotional entry, intent setting
-
-- **Today** → `/today`  
-  Screen 5 — Home / orientation hub
+- **Life** → `/life`  
+  Weekly baseline snapshot + gentle direction into the week.
 
 - **Focus** → `/focus`  
-  Screen 3 — Weekly direction (1–3 items)
+  Weekly direction (1–3 items).
+
+- **Today** → `/today`  
+  Orientation hub (glimpse + primary action).
 
 - **Journey** → `/journey`  
-  Screen 6 — Personal history & memory
+  History / memory (moments + weekly baselines + weekly focus retrospective).
 
 - **Settings** → `/settings`  
-  Screen 7 — Control & privacy
+  Control & privacy.
 
 ### Flows (short-lived, modal-style)
 Short actions that begin and end cleanly.
 
-- **Capture Moment** → `/capture`  
-  Screen 4 — atomic action; returns to origin
-
 - **Life Check** → `/life-check`  
-  Screen 2 — baseline snapshot; returns to Today
+  Baseline snapshot flow. Returns to Life.
+
+- **Capture Moment** → `/capture`  
+  Atomic action. Returns to origin (usually Today).
 
 ---
 
@@ -53,44 +55,57 @@ Short actions that begin and end cleanly.
 
 ### Primary movement
 - Users switch between destinations using **bottom tabs**:
-  - Today / Focus / Journey / Settings
+  - **Life / Focus / Today / Journey / Settings**
+- Today is the center tab (calm “home”).
 
 ### Secondary movement
 - Modals:
-  - Today → Capture
-  - Today → Life Check (as a modal flow)
+  - Life → Life Check
+  - Today → Capture Moment
 
 ---
 
 ## 3️⃣ Interaction Contracts (Locked)
 
-### Today (Home)
+### Life
+- Purpose: **weekly baseline + gentle clarity**
+- Shows:
+  - “Start / Retake Life Check”
+  - “Life this week” snapshot:
+    - short summary (“This week feels …”)
+    - per-area compact dot rows
+    - optional “Remember” line
+- No charts, no scores, no analytics.
+
+### Focus
+- Purpose: **weekly direction (1–3)**
+- Interactions (calm):
+  - Tap **text** → edit modal
+  - Tap **area pill** → change area
+  - Remove is subtle (small “×” in corner)
+- Add card hides at max; show caption “Max 3 this week.”
+
+### Today
 - Purpose: **orientation + glimpse**
 - Shows:
-  - Weekly rhythm glimpse
-  - Add Moment (primary)
-  - Recent moments (small list)
-  - CTA to Journey
-- No infinite scroll feed.
+  - weekly rhythm
+  - recent moments (small slice)
+  - one primary action: Capture Moment
+- Not a feed. No infinite scroll.
 
 ### Journey
 - Purpose: **memory + rereading**
-- Cards are collapsed by default.
-- Tap a card:
-  - expands inline (details + tags)
-  - only one card open at a time
-- When navigated from Today with a selected item:
-  - Journey opens with that item expanded and highlighted.
-
-### Focus
-- Purpose: weekly direction (1–3)
-- One input, small set, minimal friction
-- Calm metadata (area) allowed but secondary
+- Sections:
+  - Life baselines by week (collapsed “Overall ●●○○○” + expand details)
+  - Moments grouped by date
+  - “Focus this week” shown retrospectively under the baseline week
+- Cards collapsed by default; tap to expand.
+- Only one card open at a time.
 
 ### Settings
-- Purpose: control + privacy
-- Minimal options
-- No “social” toggles in MVP
+- Purpose: **control + trust**
+- Minimal options (theme, reminders later, auth/session)
+- No “social” toggles in MVP.
 
 ---
 
@@ -99,19 +114,14 @@ Short actions that begin and end cleanly.
 - **Destinations (tabs)** do not “stack back” into each other.
 - **Modals** dismiss back to the previously active destination.
 - Welcome → no back into app
-- Capture → dismiss back to the originating destination (usually Today)
-- Life Check → dismiss back to Today
-
-Today is the default home tab.
+- Capture → dismiss back to origin (usually Today)
+- Life Check → dismiss back to Life
 
 ---
 
 ## 5️⃣ MVP Navigation Philosophy
 
-- **Bottom tab bar is used in v1** for calm orientation between the 4 destinations.
-- No discovery or feed
-- No browsing other people
-- Navigation should feel invisible
+Navigation should feel invisible.
 
 Stratlife v1 is about:
 Noticing.
@@ -122,11 +132,14 @@ Not consuming.
 
 ---
 
-## 6️⃣ Open Navigation Questions (Decide later)
+## 6️⃣ Open Questions (Decide later)
 
 1. **Tab bar visibility**
    - Always visible (current)
    - Auto-hide on scroll
-2. **Destinations**
-   - Does **Settings** belong as a tab long-term?
-   - Should Focus be a tab or a short flow?
+2. **Settings as tab**
+   - Keep as tab (MVP)
+   - Move into Journey header (post-MVP)
+3. **Pro limits**
+   - Focus items: 3 vs 5+
+   - Custom area names in Life/Focus

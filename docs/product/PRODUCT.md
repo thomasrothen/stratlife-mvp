@@ -1,6 +1,5 @@
 # PRODUCT.md
-
-## Stratlife — Product & Design Philosophy (Locked)
+# Stratlife — Product & Design Philosophy (Locked)
 
 Stratlife is designed as a **calm reflection system**.
 
@@ -38,8 +37,6 @@ Not through performance anxiety.
 ### Glimpse > archive
 Primary screens show only a small, intentional slice.  
 Depth lives on secondary screens.
-
-Home is a glance, not a timeline.
 
 ---
 
@@ -89,6 +86,14 @@ not optimizing, competing, or comparing.
 - One primary action per screen
 - Every flow ends cleanly
 - No endless scroll as default behavior
+- Editing is calm: tap-to-edit, not button-heavy UIs
+
+---
+
+## Naming constraints (Locked)
+
+- Tab title = screen title = destination name
+- Destinations (MVP): **Life / Focus / Today / Journey / Settings**
 
 ---
 
@@ -108,6 +113,6 @@ Stratlife is not:
 
 ## Open Decisions (Track, decide later)
 
-- **Bottom tab bar behavior:** always visible vs auto-hide on scroll.
-- **Destination set:** whether Settings remains a tab long-term.
-- **Focus placement:** tab vs short modal flow.
+- Tab bar behavior: always visible vs auto-hide on scroll.
+- Whether Settings remains a tab long-term.
+- Pro limits: focus max 3 vs 5+, custom area names.

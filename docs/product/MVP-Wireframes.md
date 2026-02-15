@@ -1,3 +1,4 @@
+# MVP-Wireframes.md
 # Stratlife — MVP Wireframes
 #artifact #product #wireframes #mvp
 
@@ -8,22 +9,24 @@ Design contract:
 - Orientation > consumption
 - One primary action per screen
 - Progress is quiet, but visible
+- Titles match destinations (tab title = screen title)
 
 Navigation presentation (MVP implementation):
-- Destinations use a quiet bottom tab bar: Today | Focus | Journey | Settings
-- Flows open as modals: Capture, Life Check
+- Destinations use a quiet bottom tab bar: **Life | Focus | Today | Journey | Settings**
+- Flows open as modals: **Capture Moment**, **Life Check**
 
 ---
 
-|  **Wireframe #**  |  **Screen name (product)**  |  **Internal meaning**  | 
+|  **Wireframe #**  |  **Screen name (product)**  |  **Internal meaning**  |
 |---|---|---|
-|  Screen 1  |  **Welcome**  |  Emotional entry  | 
-|  Screen 2  |  **Life Check**  |  Baseline snapshot (modal flow)  | 
-|  Screen 3  |  **Focus**  |  Weekly direction (destination)  | 
-|  Screen 4  |  **Capture Moment**  |  Atomic action (modal flow)  | 
-|  Screen 5  |  **Today**  |  Orientation (destination)  | 
-|  Screen 6  |  **Journey**  |  History / memory (destination)  | 
-|  Screen 7  |  **Settings**  |  Control (destination)  | 
+|  Screen 1  |  **Welcome**  |  Emotional entry  |
+|  Screen 2  |  **Life**  |  Weekly baseline snapshot (destination) |
+|  Screen 3  |  **Life Check**  |  Baseline input (modal flow)  |
+|  Screen 4  |  **Focus**  |  Weekly direction (destination)  |
+|  Screen 5  |  **Capture Moment**  |  Atomic action (modal flow)  |
+|  Screen 6  |  **Today**  |  Orientation (destination)  |
+|  Screen 7  |  **Journey**  |  History / memory (destination)  |
+|  Screen 8  |  **Settings**  |  Control (destination)  |
 
 ---
 
@@ -41,62 +44,99 @@ and turn it into shared inspiration.
 [ Get started ]
 
 Notes:
-- No login upfront
+- No login upfront (or minimal friction)
 - This screen sells meaning, not features
 
 ---
 
-## 🟢 Screen 2 — Life Check (Modal)
+## 🟢 Screen 2 — Life (Destination)
 
-**Purpose:** Gentle self-assessment
+**Purpose:** Weekly baseline + calm direction
+
+Life  
+Week of Feb 9
+
+How does your life feel right now?
+
+[ Start / Retake Life Check ]
+
+Life this week  
+This week feels heavy.  
+Spirit     ●●○○○  
+Fit        ●●●○○  
+Experience ●●○○○  
+Connect    ●●○○○  
+Happy      ●●○○○  
+Business   ●●○○○  
+Money      ●●○○○  
+Home       ●●●●○
+
+Remember: “Better”
+
+Notes:
+- No metrics or charts
+- Dots are feelings, not scores
+- Snapshot is a calm “glance”
+
+---
+
+## 🟢 Screen 3 — Life Check (Modal)
+
+**Purpose:** Gentle self-assessment (60 seconds)
 
 Life Check  
 How does your life feel right now?
 
 Spirit        😔 ─── 😊  
 Fit           😔 ─── 😊  
-Connect       😔 ─── 😊  
 Experience    😔 ─── 😊  
+Connect       😔 ─── 😊  
 Happy         😔 ─── 😊  
 Business      😔 ─── 😊  
 Money         😔 ─── 😊  
+Home          😔 ─── 😊  
 
 Anything you want to remember?  
 [ ______________________ ]
 
-[ Continue ]   [ Close ]
+[ Save ]   [ Cancel ]
 
 Notes:
 - Sliders capture feelings, not metrics
 - Optional reflection field
-- Establishes a baseline snapshot
+- Writes the weekly baseline (Supabase)
 
 ---
 
-## 🟢 Screen 3 — Focus (Destination)
+## 🟢 Screen 4 — Focus (Destination)
 
 **Purpose:** Direction without overload
 
-Your Focus  
-What deserves your energy this week?
+Focus  
+One to three things. No pressure.  
+Week of Feb 9
 
+• Train more this week      (Area: Fit)  
+• Study for AI              (Area: Experience)
+
+Interaction (calm):
+- Tap text → edit modal
+- Tap area pill → change area
+- Subtle delete “×” (top-right)
+
+Add a focus (max 3)  
+[ text input ]  
+[ Area pill ]  
 [ + Add focus ]
-
-• More calm mornings      (Spirit)  
-• Finish proposal         (Business)
-
-One or two things are enough.
-
-[ Save focus ]
 
 Notes:
 - Max of 1–3 focus items
 - Weekly persistence (current week auto-created)
-- Focus is temporary by design
+- Add card hides at max; show caption “Max 3 this week.”
 
 ---
 
-## 🟢 Screen 4 — Capture Moment (Modal) — FINAL
+## 🟢 Screen 5 — Capture Moment (Modal)
 
 **Purpose:** Daily compounding mechanism
 
@@ -113,12 +153,9 @@ Life area (optional):
 [ Spirit ]
 
 Link to focus (optional):  
-[ More calm mornings ]
+[ Train more this week ]
 
 ☐ This might help others one day
-
-Small steps count.  
-Impact grows over time.
 
 [ Save moment ]  [ Close ]
 
@@ -129,16 +166,19 @@ Notes:
 
 ---
 
-## 🟢 Screen 5 — Today (Destination)
+## 🟢 Screen 6 — Today (Destination)
 
 **Purpose:** Orientation + gentle reflection
 
-Your Life — Today
+Today
 
 Weekly rhythm  
 • • ○ • • • ○
 
-Recent Moments  
+Current focus  
+• Train more this week
+
+Recent moments  
 • Had a calm start to the day  
 • Sent the proposal  
 
@@ -151,19 +191,24 @@ Notes:
 
 ---
 
-## 🟢 Screen 6 — Journey (Destination)
+## 🟢 Screen 7 — Journey (Destination)
 
 **Purpose:** Narrative memory, not analytics
 
-Your Journey
+Your Journey  
+This is your story — one step at a time.
 
-Mon, Feb 3  
-“Had a calm start to the day”
+Life baselines  
+Week of Feb 9  
+This week feels heavy.  
+Overall ●●○○○  
+(Expand → per-area dots + Remember + Focus this week)
 
-Sun, Feb 2  
-“Finished proposal draft”
+Moments (grouped by date)  
+Sun, Feb 8  
+“Finished developing the journey screen”
 
-Tap a moment to expand.
+Tap a card to expand.
 
 Notes:
 - Chronological and human
@@ -172,20 +217,17 @@ Notes:
 
 ---
 
-## 🟢 Screen 7 — Settings (Destination)
+## 🟢 Screen 8 — Settings (Destination)
 
 **Purpose:** Control & trust
 
 Settings
 
-Name  
-[ Tom ]
-
-Daily reminder  
-[ 20:30 ]
-
 Theme  
 ( Light • Dark )
+
+Account  
+[ Log out ]
 
 Privacy  
 You decide what stays private  
@@ -198,8 +240,6 @@ Notes:
 ---
 
 ## 🔒 Explicitly Out of MVP
-
-Intentionally not included:
 
 - Public profiles
 - Social feed or discovery

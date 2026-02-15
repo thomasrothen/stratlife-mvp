@@ -1,109 +1,414 @@
-import { useEffect, useMemo, useState } from "react";
-import { View, Pressable, ActivityIndicator } from "react-native";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  View,
+  Modal,
+  Pressable,
+  ActivityIndicator,
+  Alert,
+  ScrollView,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useFocusEffect } from "expo-router";
+
 import { theme } from "@/theme/theme";
 import { Text } from "@/ui/Text";
 import { Card } from "@/ui/Card";
 import { Input } from "@/ui/Input";
 import { Button } from "@/ui/Button";
-import { getCurrentWeeklyFocus, upsertWeeklyFocusItems } from "@/data/focus";
+
+import { supabase } from "@/lib/supabase";
+import { getWeekStartISO } from "@/lib/week";
 
 type Area =
   | "Spirit"
   | "Fit"
-  | "Connect"
   | "Experience"
+  | "Connect"
   | "Happy"
   | "Business"
-  | "Money";
+  | "Money"
+  | "Home";
 
 const AREAS: Area[] = [
   "Spirit",
   "Fit",
-  "Connect",
   "Experience",
+  "Connect",
   "Happy",
   "Business",
   "Money",
+  "Home",
 ];
 
-type FocusItem = {
+type FocusItemUI = {
   id?: string;
+  position: number;
   text: string;
-  area: Area;
+  area: Area | null;
 };
 
+type FocusWeekRow = {
+  id: string;
+  week_start: string;
+};
+
+type FocusItemRow = {
+  id: string;
+  focus_week_id: string;
+  position: number;
+  text: string;
+  area: string | null;
+  deleted_at: string | null;
+};
+
+function formatWeekLabel(weekStartISO: string) {
+  const d = new Date(`${weekStartISO}T00:00:00`);
+  return `Week of ${d.toLocaleDateString(undefined, { month: "short", day: "numeric" })}`;
+}
+
+function AreaPill({
+  label,
+  onPress,
+}: {
+  label: string;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      style={{
+        alignSelf: "flex-start",
+        paddingHorizontal: 10,
+        paddingVertical: 6,
+        borderRadius: 999,
+        backgroundColor: "rgba(0,0,0,0.03)",
+        borderWidth: 1,
+        borderColor: "rgba(0,0,0,0.10)",
+      }}
+    >
+      <Text muted variant="caption" style={{ opacity: 0.75 }}>
+        {label}
+      </Text>
+    </Pressable>
+  );
+}
+
+function SheetRow({
+  title,
+  selected,
+  onPress,
+}: {
+  title: string;
+  selected?: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      style={{
+        paddingVertical: 12,
+        paddingHorizontal: 12,
+        borderRadius: 12,
+        backgroundColor: selected ? "rgba(47,93,144,0.08)" : "transparent",
+        borderWidth: 1,
+        borderColor: selected ? "rgba(47,93,144,0.25)" : "rgba(0,0,0,0.06)",
+      }}
+    >
+      <View
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "space-between",
+        }}
+      >
+        <Text style={{ fontWeight: "700" }}>{title}</Text>
+        <View
+          style={{
+            width: 8,
+            height: 8,
+            borderRadius: 999,
+            backgroundColor: selected
+              ? "rgba(47,93,144,0.85)"
+              : "rgba(0,0,0,0.10)",
+          }}
+        />
+      </View>
+    </Pressable>
+  );
+}
+
+type AreaTarget =
+  | { type: "draft" }
+  | { type: "item"; index: number }
+  | { type: "edit" };
+
 export default function FocusScreen() {
+  const weekStartISO = useMemo(() => getWeekStartISO(), []);
+  const weekLabel = useMemo(() => formatWeekLabel(weekStartISO), [weekStartISO]);
+
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [weekId, setWeekId] = useState<string | null>(null);
+  const [focusWeekId, setFocusWeekId] = useState<string | null>(null);
 
-  const [items, setItems] = useState<FocusItem[]>([]);
+  const [items, setItems] = useState<FocusItemUI[]>([]);
   const [draftText, setDraftText] = useState("");
-  const [draftArea, setDraftArea] = useState<Area>("Spirit");
+  const [draftArea, setDraftArea] = useState<Area | null>(null);
 
-  useEffect(() => {
-    void load();
-  }, []);
+  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle");
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const skipAutosaveOnce = useRef(true);
 
-  async function load() {
+  const MAX_ITEMS = 3;
+  const isMax = items.length >= MAX_ITEMS;
+
+  // Area picker modal
+  const [areaModalOpen, setAreaModalOpen] = useState(false);
+  const [areaTarget, setAreaTarget] = useState<AreaTarget>({ type: "draft" });
+
+  // Edit modal (tap text)
+  const [editOpen, setEditOpen] = useState(false);
+  const [editIndex, setEditIndex] = useState<number | null>(null);
+  const [editText, setEditText] = useState("");
+  const [editArea, setEditArea] = useState<Area | null>(null);
+
+  const draftTrimmed = draftText.trim();
+  const canAdd = draftTrimmed.length > 0 && !isMax;
+
+  const load = useCallback(async () => {
     setLoading(true);
     try {
-      const result = await getCurrentWeeklyFocus();
-      setWeekId(result.week.id);
+      const { data: userRes, error: userErr } = await supabase.auth.getUser();
+      if (userErr) {
+        console.log("[Focus] auth.getUser error:", userErr);
+        Alert.alert("Focus", "Couldn’t read your session.");
+        setItems([]);
+        setFocusWeekId(null);
+        return;
+      }
+      const user = userRes?.user;
+      if (!user) {
+        setItems([]);
+        setFocusWeekId(null);
+        return;
+      }
 
-      setItems(
-        result.items.map((i) => ({
-          id: i.id,
-          text: i.text,
-          area: (i.area as Area) ?? "Spirit",
-        }))
-      );
+      const { data: weekRow, error: weekErr } = await supabase
+        .from("focus_weeks")
+        .upsert(
+          { user_id: user.id, week_start: weekStartISO },
+          { onConflict: "user_id,week_start" }
+        )
+        .select("id, week_start")
+        .single();
+
+      if (weekErr) {
+        console.log("[Focus] upsert focus_weeks error:", weekErr);
+        Alert.alert("Focus", `Couldn’t prepare this week.\n\n${weekErr.message}`);
+        setItems([]);
+        setFocusWeekId(null);
+        return;
+      }
+
+      const focusWeek = weekRow as FocusWeekRow;
+      setFocusWeekId(focusWeek.id);
+
+      const { data: rows, error: itemsErr } = await supabase
+        .from("focus_items")
+        .select("id, focus_week_id, position, text, area, deleted_at")
+        .eq("focus_week_id", focusWeek.id)
+        .is("deleted_at", null)
+        .order("position", { ascending: true });
+
+      if (itemsErr) {
+        console.log("[Focus] load focus_items error:", itemsErr);
+        Alert.alert("Focus", `Couldn’t load focus.\n\n${itemsErr.message}`);
+        setItems([]);
+        return;
+      }
+
+      const ui = (rows ?? []).map((r: FocusItemRow) => ({
+        id: r.id,
+        position: r.position,
+        text: r.text,
+        area: (r.area as Area) ?? null,
+      }));
+
+      setItems(ui);
+      setSaveState("idle");
+      skipAutosaveOnce.current = true;
     } finally {
       setLoading(false);
     }
-  }
+  }, [weekStartISO]);
 
-  const canAdd = useMemo(
-    () => draftText.trim().length > 0 && items.length < 3,
-    [draftText, items.length]
+  useFocusEffect(
+    useCallback(() => {
+      void load();
+    }, [load])
   );
 
-  const canSave = useMemo(() => items.length > 0 && !!weekId, [items.length, weekId]);
+  const persist = useCallback(
+    async (nextItems: FocusItemUI[]) => {
+      if (!focusWeekId) return;
 
-  function addFocus() {
-    if (!canAdd) return;
-    setItems((prev) => [...prev, { text: draftText.trim(), area: draftArea }]);
-    setDraftText("");
-  }
+      const { data: userRes, error: userErr } = await supabase.auth.getUser();
+      if (userErr) {
+        console.log("[Focus] auth.getUser error:", userErr);
+        Alert.alert("Focus", `Couldn’t save.\n\n${userErr.message}`);
+        return;
+      }
+      const user = userRes?.user;
+      if (!user) {
+        Alert.alert("Focus", "Not signed in.");
+        return;
+      }
 
-  function removeFocus(index: number) {
-    setItems((prev) => prev.filter((_, i) => i !== index));
-  }
+      setSaveState("saving");
 
-  async function saveFocus() {
-    if (!weekId || saving) return;
+      const del = await supabase.from("focus_items").delete().eq("focus_week_id", focusWeekId);
+      if (del.error) {
+        console.log("[Focus] delete focus_items error:", del.error);
+        Alert.alert("Focus", `Couldn’t save.\n\n${del.error.message}`);
+        setSaveState("idle");
+        return;
+      }
 
-    setSaving(true);
-    try {
-      await upsertWeeklyFocusItems(
-        weekId,
-        items.map((it, index) => ({
-          position: (index + 1) as 1 | 2 | 3,
+      if (nextItems.length > 0) {
+        const payload = nextItems.map((it, idx) => ({
+          user_id: user.id,
+          focus_week_id: focusWeekId,
+          position: idx + 1,
           text: it.text,
           area: it.area,
-        }))
-      );
-      await load();
-    } finally {
-      setSaving(false);
+        }));
+
+        const ins = await supabase.from("focus_items").insert(payload);
+        if (ins.error) {
+          console.log("[Focus] insert focus_items error:", ins.error);
+          Alert.alert("Focus", `Couldn’t save.\n\n${ins.error.message}`);
+          setSaveState("idle");
+          return;
+        }
+      }
+
+      setSaveState("saved");
+      setTimeout(() => setSaveState("idle"), 900);
+    },
+    [focusWeekId]
+  );
+
+  useEffect(() => {
+    if (!focusWeekId) return;
+
+    if (skipAutosaveOnce.current) {
+      skipAutosaveOnce.current = false;
+      return;
     }
+
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => {
+      void persist(items);
+    }, 450);
+
+    return () => {
+      if (saveTimer.current) clearTimeout(saveTimer.current);
+    };
+  }, [items, focusWeekId, persist]);
+
+  function addItem() {
+    if (!canAdd) return;
+
+    setItems((prev) => {
+      const next: FocusItemUI[] = [
+        ...prev,
+        { position: prev.length + 1, text: draftTrimmed, area: draftArea },
+      ];
+      return next.slice(0, MAX_ITEMS);
+    });
+
+    setDraftText("");
+    setDraftArea(null);
   }
+
+  function removeItem(index: number) {
+    setItems((prev) =>
+      prev
+        .filter((_, i) => i !== index)
+        .map((it, idx) => ({ ...it, position: idx + 1 }))
+    );
+  }
+
+  function openEdit(index: number) {
+    const it = items[index];
+    setEditIndex(index);
+    setEditText(it.text);
+    setEditArea(it.area ?? null);
+    setEditOpen(true);
+  }
+
+  function saveEdit() {
+    if (editIndex === null) return;
+    const t = editText.trim();
+    if (!t) {
+      Alert.alert("Focus", "Please enter a focus.");
+      return;
+    }
+
+    setItems((prev) =>
+      prev.map((it, idx) =>
+        idx === editIndex ? { ...it, text: t, area: editArea } : it
+      )
+    );
+
+    setEditOpen(false);
+    setEditIndex(null);
+  }
+
+  function openAreaPicker(target: AreaTarget) {
+    setAreaTarget(target);
+    setAreaModalOpen(true);
+  }
+
+  function currentSelectedArea(): Area | null {
+    if (areaTarget.type === "draft") return draftArea;
+    if (areaTarget.type === "edit") return editArea;
+    return items[areaTarget.index]?.area ?? null;
+  }
+
+  function applyAreaSelection(a: Area | null) {
+    if (areaTarget.type === "draft") {
+      setDraftArea(a);
+      setAreaModalOpen(false);
+      return;
+    }
+
+    if (areaTarget.type === "edit") {
+      setEditArea(a);
+      setAreaModalOpen(false);
+      return;
+    }
+
+    // update existing item directly (autosaves)
+    const idx = areaTarget.index;
+    setItems((prev) => prev.map((it, i) => (i === idx ? { ...it, area: a } : it)));
+    setAreaModalOpen(false);
+  }
+
+  const helperText = useMemo(() => {
+    if (isMax) return "";
+    if (draftTrimmed.length > 0) return "Tap “Add focus” to save.";
+    return "Saved automatically after you edit, add, or remove.";
+  }, [draftTrimmed.length, isMax]);
+
+  const statusText = useMemo(() => {
+    if (saveState === "saving") return "Saving…";
+    if (saveState === "saved") return "Saved";
+    return "";
+  }, [saveState]);
 
   if (loading) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.bg }}>
-        <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+        <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
           <ActivityIndicator />
         </View>
       </SafeAreaView>
@@ -112,91 +417,225 @@ export default function FocusScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.bg }}>
-      <View
-        style={{
-          flex: 1,
+      <ScrollView
+        contentContainerStyle={{
           padding: theme.space.lg,
           gap: theme.space.lg,
+          paddingBottom: 96,
         }}
+        showsVerticalScrollIndicator={false}
       >
-        {/* Header */}
         <View style={{ gap: theme.space.xs }}>
           <Text variant="title" style={{ fontWeight: "800" }}>
             Focus
           </Text>
           <Text muted>One to three things. No pressure.</Text>
+          <Text muted variant="caption" style={{ opacity: 0.6 }}>
+            {weekLabel}
+          </Text>
         </View>
 
-        {/* Items (content first) */}
+        {statusText ? (
+          <Text muted variant="caption" style={{ opacity: 0.55 }}>
+            {statusText}
+          </Text>
+        ) : null}
+
         {items.length === 0 ? (
           <Card>
-            <Text style={{ fontWeight: "700" }}>Nothing selected yet.</Text>
+            <Text style={{ fontWeight: "800" }}>Nothing selected yet.</Text>
             <Text muted style={{ marginTop: theme.space.xs }}>
               Choose what deserves your energy this week.
             </Text>
           </Card>
         ) : (
           <View style={{ gap: theme.space.sm }}>
-            {items.map((it, index) => (
-              <Card key={`${it.id ?? "new"}-${index}`}>
-                <Text style={{ fontWeight: "800" }}>{it.text}</Text>
-                <Text muted variant="caption" style={{ marginTop: theme.space.xs, opacity: 0.75 }}>
-                  {it.area}
-                </Text>
-                <View style={{ marginTop: theme.space.md }}>
-                  <Button
-                    title="Remove"
-                    variant="secondary"
-                    onPress={() => removeFocus(index)}
-                  />
+            {items.map((it, idx) => {
+              const isLast = idx === items.length - 1;
+
+              return (
+                <View key={`${it.id ?? "local"}-${idx}`} style={{ gap: 6 }}>
+                  <Card>
+                    {/* Header row: text (tap to edit) + subtle remove in corner */}
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        alignItems: "flex-start",
+                        justifyContent: "space-between",
+                        gap: theme.space.md,
+                      }}
+                    >
+                      <Pressable onPress={() => openEdit(idx)} style={{ flex: 1 }}>
+                        <Text style={{ fontWeight: "800" }}>{it.text}</Text>
+                      </Pressable>
+
+                      <Pressable
+                        onPress={() => removeItem(idx)}
+                        hitSlop={10}
+                        style={{
+                          width: 28,
+                          height: 28,
+                          borderRadius: 14,
+                          alignItems: "center",
+                          justifyContent: "center",
+                          backgroundColor: "rgba(0,0,0,0.03)",
+                          borderWidth: 1,
+                          borderColor: "rgba(0,0,0,0.08)",
+                        }}
+                      >
+                        <Text muted style={{ fontSize: 16, lineHeight: 16, opacity: 0.6 }}>
+                          ×
+                        </Text>
+                      </Pressable>
+                    </View>
+
+                    <View style={{ marginTop: theme.space.sm }}>
+                      <AreaPill
+                        label={`Area: ${it.area ?? "None"}`}
+                        onPress={() => openAreaPicker({ type: "item", index: idx })}
+                      />
+                    </View>
+                  </Card>
+
+                  {isLast && isMax ? (
+                    <Text muted variant="caption" style={{ opacity: 0.55, paddingLeft: 2 }}>
+                      Max {MAX_ITEMS} this week.
+                    </Text>
+                  ) : null}
                 </View>
-              </Card>
-            ))}
+              );
+            })}
           </View>
         )}
 
-        {/* Add section */}
-        <Card>
-          <Text muted variant="caption" style={{ opacity: 0.75 }}>
-            Add a focus (max 3)
-          </Text>
+        {/* Add card only when not maxed */}
+        {!isMax ? (
+          <Card>
+            <Text muted variant="caption" style={{ opacity: 0.75 }}>
+              Add a focus (max {MAX_ITEMS})
+            </Text>
 
-          <View style={{ marginTop: theme.space.sm, gap: theme.space.sm }}>
-            <Input
-              value={draftText}
-              onChangeText={setDraftText}
-              placeholder="Add a focus…"
-              maxLength={80}
-            />
+            <View style={{ marginTop: theme.space.sm, gap: theme.space.sm }}>
+              <Input
+                value={draftText}
+                onChangeText={setDraftText}
+                placeholder="Add a focus…"
+                maxLength={80}
+              />
 
-            <Pressable
-              onPress={() => {
-                const idx = AREAS.indexOf(draftArea);
-                setDraftArea(AREAS[(idx + 1) % AREAS.length]);
-              }}
-            >
-              <Text muted variant="caption">
-                Area: {draftArea} (tap to change)
-              </Text>
-            </Pressable>
+              <AreaPill
+                label={`Area: ${draftArea ?? "None"}`}
+                onPress={() => openAreaPicker({ type: "draft" })}
+              />
 
-            <Button
-              title={items.length >= 3 ? "Max 3 focuses" : "+ Add focus"}
-              variant="secondary"
-              disabled={!canAdd}
-              onPress={addFocus}
-            />
-          </View>
-        </Card>
+              <Button title="+ Add focus" variant="secondary" disabled={!canAdd} onPress={addItem} />
 
-        {items.length > 0 ? (
-          <Button
-            title={saving ? "Saving…" : "Save focus"}
-            disabled={!canSave || saving}
-            onPress={saveFocus}
-          />
+              {helperText ? (
+                <Text muted variant="caption" style={{ opacity: 0.6 }}>
+                  {helperText}
+                </Text>
+              ) : null}
+            </View>
+          </Card>
         ) : null}
-      </View>
+
+        {/* Area picker sheet */}
+        <Modal
+          visible={areaModalOpen}
+          animationType="fade"
+          transparent
+          onRequestClose={() => setAreaModalOpen(false)}
+        >
+          <Pressable
+            style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.25)" }}
+            onPress={() => setAreaModalOpen(false)}
+          >
+            <View style={{ flex: 1, justifyContent: "flex-end", padding: theme.space.lg }}>
+              <Pressable onPress={() => {}}>
+                <View
+                  style={{
+                    backgroundColor: theme.colors.surface,
+                    borderRadius: theme.radius.lg,
+                    borderWidth: 1,
+                    borderColor: theme.colors.border,
+                    padding: theme.space.md,
+                    gap: theme.space.sm,
+                  }}
+                >
+                  <Text style={{ fontWeight: "800" }}>Area</Text>
+
+                  <SheetRow title="None" selected={currentSelectedArea() === null} onPress={() => applyAreaSelection(null)} />
+
+                  {AREAS.map((a) => (
+                    <SheetRow
+                      key={a}
+                      title={a}
+                      selected={currentSelectedArea() === a}
+                      onPress={() => applyAreaSelection(a)}
+                    />
+                  ))}
+
+                  <Pressable
+                    onPress={() => setAreaModalOpen(false)}
+                    style={{ paddingVertical: 10, alignItems: "center" }}
+                  >
+                    <Text muted style={{ opacity: 0.75 }}>
+                      Cancel
+                    </Text>
+                  </Pressable>
+                </View>
+              </Pressable>
+            </View>
+          </Pressable>
+        </Modal>
+
+        {/* Edit modal (tap text) */}
+        <Modal
+          visible={editOpen}
+          animationType="fade"
+          transparent
+          onRequestClose={() => setEditOpen(false)}
+        >
+          <Pressable
+            style={{
+              flex: 1,
+              backgroundColor: "rgba(0,0,0,0.25)",
+              padding: theme.space.lg,
+              justifyContent: "center",
+            }}
+            onPress={() => setEditOpen(false)}
+          >
+            <Pressable onPress={() => {}}>
+              <Card>
+                <Text style={{ fontWeight: "800" }}>Edit focus</Text>
+
+                <View style={{ height: theme.space.sm }} />
+
+                <Input
+                  value={editText}
+                  onChangeText={setEditText}
+                  placeholder="Focus…"
+                  maxLength={80}
+                />
+
+                <View style={{ height: theme.space.sm }} />
+
+                <AreaPill
+                  label={`Area: ${editArea ?? "None"}`}
+                  onPress={() => openAreaPicker({ type: "edit" })}
+                />
+
+                <View style={{ height: theme.space.md }} />
+
+                <View style={{ gap: theme.space.sm }}>
+                  <Button title="Save" onPress={saveEdit} />
+                  <Button title="Cancel" variant="secondary" onPress={() => setEditOpen(false)} />
+                </View>
+              </Card>
+            </Pressable>
+          </Pressable>
+        </Modal>
+      </ScrollView>
     </SafeAreaView>
   );
 }
